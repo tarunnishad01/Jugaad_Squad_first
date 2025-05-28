@@ -1,13 +1,95 @@
 <!DOCTYPE html>
-<html>
-<head>
-	<!-- Add CSS at the head of HTML file -->
-    <link rel="stylesheet" href="./css/main.css">
-</head>
-<body>
-		<!-- Your code goes here-->
+<html lang="en">
 
-	<!-- Add JS at the bottom of HTML file --> 
-        <script src="./js/main.js"></script>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Amplifier Circuit Simulator</title>
+	<link rel="stylesheet" href="./css/main.css">
+
+</head>
+
+<body>
+	<header>
+		<h1>Amplifier Circuit Simulator</h1>
+	</header>
+	<main>
+		<section class="controls" aria-label="Amplifier Controls">
+			<h2>Controls</h2>
+			<label for="gainRange">Gain (Av): <span id="gainValue">2.0</span></label>
+			<input type="range" id="gainRange" min="0.5" max="20" step="0.1" value="2" />
+
+			<label for="inputAmplitudeRange">Input Amplitude (V): <span id="inputAmpValue">1.0</span></label>
+			<input type="range" id="inputAmplitudeRange" min="0.1" max="5" step="0.1" value="1.0" />
+
+			<label for="freqRange">Input Frequency (Hz): <span id="freqValue">1</span></label>
+			<input type="range" id="freqRange" min="0.1" max="10" step="0.1" value="1" />
+
+			<label for="offsetInput">DC Offset (V): <span id="offsetValue">0.0</span></label>
+			<input type="range" id="offsetInput" min="-2" max="2" step="0.1" value="0" />
+
+			<h1>Circuit Diagram</h1>
+			<div class="circuit-diagram" aria-label="Simplified Amplifier Circuit Diagram">
+				<svg width="100%" height="180" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid meet" role="img"
+					aria-describedby="diagramDesc">
+					<desc id="diagramDesc">Simplified amplifier circuit with input, transistor, resistors, outputs
+						labeled.</desc>
+					<!-- Input -->
+					<text x="10" y="30" class="circuit-text">Vin</text>
+					<line x1="50" y1="40" x2="110" y2="40" stroke="#4caf50" stroke-width="3" marker-end="url(#arrow)" />
+
+					<!-- Resistor R1 -->
+					<rect x="110" y="25" width="20" height="30" fill="none" stroke="#4caf50" stroke-width="3" />
+					<text x="115" y="45" class="circuit-text" font-size="14">R1</text>
+					<line x1="130" y1="40" x2="170" y2="40" stroke="#4caf50" stroke-width="3"
+						marker-end="url(#arrow)" />
+
+					<!-- Transistor symbol -->
+					<circle cx="200" cy="40" r="20" fill="none" stroke="#4caf50" stroke-width="3" />
+					<line x1="185" y1="25" x2="185" y2="55" stroke="#4caf50" stroke-width="3" />
+					<line x1="215" y1="25" x2="215" y2="55" stroke="#4caf50" stroke-width="3" />
+					<text x="190" y="75" class="circuit-text" font-size="14">Q1</text>
+
+					<!-- Resistor R2 -->
+					<line x1="220" y1="40" x2="270" y2="40" stroke="#4caf50" stroke-width="3"
+						marker-end="url(#arrow)" />
+					<rect x="270" y="25" width="20" height="30" fill="none" stroke="#4caf50" stroke-width="3" />
+					<text x="275" y="45" class="circuit-text" font-size="14">R2</text>
+					<line x1="290" y1="40" x2="340" y2="40" stroke="#4caf50" stroke-width="3"
+						marker-end="url(#arrow)" />
+
+					<!-- Output -->
+					<text x="350" y="30" class="circuit-text">Vout</text>
+					<line x1="350" y1="40" x2="400" y2="40" stroke="#4caf50" stroke-width="3"
+						marker-end="url(#arrow)" />
+
+					<defs>
+						<marker id="arrow" markerWidth="10" markerHeight="7" refX="7" refY="3.5" orient="auto">
+							<polygon points="0 0, 10 3.5, 0 7" fill="#4caf50" />
+						</marker>
+					</defs>
+				</svg>
+			</div>
+		</section>
+		<section class="simulator" aria-label="Amplifier Signal Simulator">
+			<h2>Signal Simulator</h2>
+			<canvas id="waveCanvas" width="580" height="280" role="img"
+				aria-label="Input and output voltage waveforms"></canvas>
+			<section>
+				<div id="calculatedOutput"
+					style="margin-top: 20px; text-align: center; font-size: 1.1rem; color: #81c784;">
+
+			</section>
+
+			</div>
+		</section>
+
+
+	</main>
+	<footer>© 2025 Amplifier Circuit Simulator</footer>
+	<script src="./js/main.js"></script>
 </body>
+
+</html>
+
 </html>
