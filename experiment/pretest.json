@@ -2,37 +2,173 @@
   "version": 2.0,
   "questions": [
     {
-      "question": "This is a Sample Question 1?",
+      "question": "What is the primary purpose of using simulation in amplifier circuit design?",
       "answers": {
-        "a": "answer1",
-        "b": "answer2",
-        "c": "answer3",
-        "d": "answer4"
+        "a": "To reduce the number of transistors",
+        "b": "To avoid using capacitors",
+        "c": "To analyze and test circuit behavior before physical implementation",
+        "d": "To increase the PCB size"
       },
       "explanations": {
-        "a": "Explanation 1  <a href='www.google.com'>here</a>",
-        "b": "Explanation 2",
-        "c": "Explanation 2",
-        "d": "Explanation 2"
+        "a": "Reducing transistors is a design goal, not the primary purpose of simulation.",
+        "b": "Capacitor use is unrelated to the need for simulation.",
+        "c": "Correct. Simulation helps in analyzing and testing the design virtually. <a href='https://en.wikipedia.org/wiki/Electronic_design_automation'>More here</a>",
+        "d": "Increasing PCB size is not a design objective."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Which software is commonly used for simulating amplifier circuits?",
+      "answers": {
+        "a": "Photoshop",
+        "b": "SPICE",
+        "c": "Excel",
+        "d": "AutoCAD"
+      },
+      "explanations": {
+        "a": "Photoshop is for image editing.",
+        "b": "Correct. SPICE is widely used for electronic circuit simulation. <a href='https://en.wikipedia.org/wiki/SPICE'>More here</a>",
+        "c": "Excel is for spreadsheets.",
+        "d": "AutoCAD is used for mechanical and architectural design."
+      },
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "What does an AC analysis in amplifier simulation evaluate?",
+      "answers": {
+        "a": "Battery life",
+        "b": "Signal frequency response",
+        "c": "Device packaging",
+        "d": "Wire color"
+      },
+      "explanations": {
+        "a": "Battery life is not analyzed in AC analysis.",
+        "b": "Correct. AC analysis evaluates frequency response of amplifiers. <a href='https://www.analog.com/en/analog-dialogue/articles/introduction-to-spice-ac-analysis.html'>More here</a>",
+        "c": "Packaging is a hardware concern.",
+        "d": "Wire color is not relevant in simulations."
+      },
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Which component typically provides gain in an amplifier circuit?",
+      "answers": {
+        "a": "Resistor",
+        "b": "Capacitor",
+        "c": "Transistor",
+        "d": "Inductor"
+      },
+      "explanations": {
+        "a": "Resistors control current but do not amplify.",
+        "b": "Capacitors store energy but don't provide gain.",
+        "c": "Correct. Transistors are active elements that provide gain. <a href='https://www.electronics-tutorials.ws/amplifier/amp_1.html'>More here</a>",
+        "d": "Inductors are passive components."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "In simulation, what does the DC operating point help determine?",
+      "answers": {
+        "a": "Thermal resistance",
+        "b": "Frequency range",
+        "c": "Steady-state voltages and currents",
+        "d": "Color coding of wires"
+      },
+      "explanations": {
+        "a": "Thermal resistance is a physical property.",
+        "b": "Frequency is addressed in AC analysis.",
+        "c": "Correct. DC operating point gives the steady-state bias conditions. <a href='https://www.analog.com/en/technical-articles/understanding-dc-operating-point-analysis.html'>More here</a>",
+        "d": "Wire color is irrelevant."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Which type of amplifier is commonly used for voltage amplification?",
+      "answers": {
+        "a": "Common-emitter",
+        "b": "Differential",
+        "c": "Class D",
+        "d": "Bridge rectifier"
+      },
+      "explanations": {
+        "a": "Correct. Common-emitter amplifiers are used for voltage gain. <a href='https://www.electronics-tutorials.ws/transistor/tran_4.html'>More here</a>",
+        "b": "Differential amplifiers are used in analog systems but less basic.",
+        "c": "Class D is for high-efficiency power amps.",
+        "d": "Bridge rectifier is not an amplifier."
       },
       "correctAnswer": "a",
       "difficulty": "beginner"
     },
     {
-      "question": "This is a Sample Question 2?",
+      "question": "What does 'gain' in an amplifier circuit mean?",
       "answers": {
-        "a": "answer1",
-        "b": "answer2",
-        "c": "answer3",
-        "d": "answer4"
+        "a": "The number of components used",
+        "b": "The increase in input signal strength",
+        "c": "The heat produced",
+        "d": "The signal delay"
       },
       "explanations": {
-        "a": "Explanation 1  <a href='www.google.com'>here</a>",
-        "b": "Explanation 2",
-        "c": "Explanation 2",
-        "d": "Explanation 2"
+        "a": "Component count is unrelated to gain.",
+        "b": "Correct. Gain refers to the amplified output signal compared to the input. <a href='https://www.allaboutcircuits.com/textbook/semiconductors/chpt-4/amplifiers/'>More here</a>",
+        "c": "Heat is a side effect, not gain.",
+        "d": "Delay is related to bandwidth, not gain."
+      },
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "What must be done before running a simulation of a custom amplifier circuit?",
+      "answers": {
+        "a": "Build it physically",
+        "b": "Export it to PDF",
+        "c": "Set up all component parameters and wiring",
+        "d": "Calculate shipping cost"
+      },
+      "explanations": {
+        "a": "Simulation replaces physical prototyping initially.",
+        "b": "PDF export is unrelated.",
+        "c": "Correct. Proper circuit setup is crucial for accurate simulation. <a href='https://www.ti.com/lit/an/sboa092a/sboa092a.pdf'>More here</a>",
+        "d": "Shipping is irrelevant."
       },
       "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Why might one use a virtual oscilloscope in a simulation?",
+      "answers": {
+        "a": "To bake circuits",
+        "b": "To monitor signal voltages over time",
+        "c": "To print circuit diagrams",
+        "d": "To add color to the circuit"
+      },
+      "explanations": {
+        "a": "Ovens are not used in simulation.",
+        "b": "Correct. Oscilloscopes help view time-domain signals. <a href='https://www.learnabout-electronics.org/Oscilloscopes/osc21.php'>More here</a>",
+        "c": "Printing is a separate function.",
+        "d": "Color is for UI, not analysis."
+      },
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Which parameter indicates how much an amplifier boosts a signal?",
+      "answers": {
+        "a": "Gain",
+        "b": "Offset",
+        "c": "Impedance",
+        "d": "Bandwidth"
+      },
+      "explanations": {
+        "a": "Correct. Gain is the ratio of output to input signal. <a href='https://www.electronics-tutorials.ws/amplifier/amp_2.html'>More here</a>",
+        "b": "Offset is a DC component shift.",
+        "c": "Impedance relates to resistance in AC circuits.",
+        "d": "Bandwidth is the range of frequencies amplified."
+      },
+      "correctAnswer": "a",
       "difficulty": "beginner"
     }
   ]
