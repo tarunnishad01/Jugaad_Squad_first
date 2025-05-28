@@ -2,35 +2,171 @@
   "version": 2.0,
   "questions": [
     {
-      "question": "This is a Sample Question 1?",
+      "question": "Which simulation result confirms the amplifier is working as intended?",
       "answers": {
-        "a": "answer1",
-        "b": "answer2",
-        "c": "answer3",
-        "d": "answer4"
+        "a": "No current flow",
+        "b": "Output voltage equals input",
+        "c": "Amplified output signal with correct phase",
+        "d": "No signal at output"
       },
       "explanations": {
-        "a": "Explanation 1  <a href='www.google.com'>here</a>",
-        "b": "Explanation 2",
-        "c": "Explanation 2",
-        "d": "Explanation 2"
+        "a": "No current suggests the circuit is not active.",
+        "b": "Equal input and output means no amplification.",
+        "c": "Correct. A working amplifier outputs a larger signal, possibly inverted depending on the type. <a href='https://www.electronics-tutorials.ws/amplifier/amp_2.html'>here</a>",
+        "d": "No output signal means the circuit may be broken."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "What is a key advantage of using simulation before building a custom amplifier circuit?",
+      "answers": {
+        "a": "Increases PCB size",
+        "b": "Avoids need for testing",
+        "c": "Identifies issues without physical components",
+        "d": "Reduces gain"
+      },
+      "explanations": {
+        "a": "Simulation has no impact on PCB size.",
+        "b": "Testing is still required but simulation helps in early detection.",
+        "c": "Correct. Simulations help find issues before hardware is built. <a href='https://www.ti.com/lit/an/snoa665/snoa665.pdf'>here</a>",
+        "d": "Simulation doesn't reduce gain."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "In a simulated amplifier circuit, what might a clipped output waveform suggest?",
+      "answers": {
+        "a": "Proper amplification",
+        "b": "Noise filtering",
+        "c": "Power supply limitations or overdrive",
+        "d": "Component mismatch"
+      },
+      "explanations": {
+        "a": "Clipping is not normal operation.",
+        "b": "Filtering doesn't produce clipping.",
+        "c": "Correct. Clipping usually means the output voltage exceeds supply rails. <a href='https://www.electronics-notes.com/articles/analogue_circuits/amplifiers/clipping.php'>here</a>",
+        "d": "Mismatch may cause distortion but not always clipping."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Which parameter is measured in transient analysis during simulation?",
+      "answers": {
+        "a": "Gain at different frequencies",
+        "b": "Output impedance",
+        "c": "Time-domain signal response",
+        "d": "Steady-state current only"
+      },
+      "explanations": {
+        "a": "This is measured in AC analysis.",
+        "b": "Output impedance is not the focus of transient analysis.",
+        "c": "Correct. Transient analysis shows how circuits respond over time. <a href='https://www.analog.com/en/technical-articles/transient-analysis-in-spice.html'>here</a>",
+        "d": "It also shows dynamic behaviors, not just steady-state."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "What role does a bypass capacitor play in amplifier circuit simulation?",
+      "answers": {
+        "a": "Suppresses power supply ripple",
+        "b": "Increases resistance",
+        "c": "Inverts the signal",
+        "d": "Adds noise"
+      },
+      "explanations": {
+        "a": "Correct. Bypass capacitors filter power supply noise. <a href='https://www.electronics-tutorials.ws/amplifier/amp_6.html'>here</a>",
+        "b": "Capacitors don't increase resistance.",
+        "c": "Bypass capacitors don't change signal polarity.",
+        "d": "They reduce noise, not add it."
       },
       "correctAnswer": "a",
       "difficulty": "beginner"
     },
     {
-      "question": "This is a Sample Question 2?",
+      "question": "Which configuration gives high input impedance in amplifier design?",
       "answers": {
-        "a": "answer1",
-        "b": "answer2",
-        "c": "answer3",
-        "d": "answer4"
+        "a": "Common-emitter",
+        "b": "Common-base",
+        "c": "Emitter-follower",
+        "d": "Bridge rectifier"
       },
       "explanations": {
-        "a": "Explanation 1  <a href='www.google.com'>here</a>",
-        "b": "Explanation 2",
-        "c": "Explanation 2",
-        "d": "Explanation 2"
+        "a": "Common-emitter has moderate input impedance.",
+        "b": "Common-base has low input impedance.",
+        "c": "Correct. Emitter-follower (common-collector) has high input impedance. <a href='https://www.electronics-tutorials.ws/transistor/tran_5.html'>here</a>",
+        "d": "Not an amplifier configuration."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Why is feedback used in amplifier circuit simulations?",
+      "answers": {
+        "a": "To increase distortion",
+        "b": "To reduce bandwidth",
+        "c": "To stabilize gain and reduce noise",
+        "d": "To add oscillations"
+      },
+      "explanations": {
+        "a": "Feedback reduces distortion.",
+        "b": "It generally improves bandwidth handling.",
+        "c": "Correct. Feedback improves stability and reduces sensitivity. <a href='https://www.electronics-tutorials.ws/amplifier/amp_7.html'>here</a>",
+        "d": "Negative feedback suppresses oscillations."
+      },
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "Which parameter would most directly indicate distortion in a simulated amplifier output?",
+      "answers": {
+        "a": "THD (Total Harmonic Distortion)",
+        "b": "DC bias level",
+        "c": "Resistance",
+        "d": "Capacitance"
+      },
+      "explanations": {
+        "a": "Correct. THD measures signal distortion in amplifiers. <a href='https://www.ranecommercial.com/legacy/note128.html'>here</a>",
+        "b": "Bias affects operation, not distortion directly.",
+        "c": "Resistance is not a distortion metric.",
+        "d": "Capacitance relates to filtering and timing."
+      },
+      "correctAnswer": "a",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "What is typically adjusted to set the gain in a custom amplifier simulation?",
+      "answers": {
+        "a": "Transistor color",
+        "b": "Feedback resistor values",
+        "c": "Power cord length",
+        "d": "Simulation file format"
+      },
+      "explanations": {
+        "a": "Color has no effect.",
+        "b": "Correct. Feedback resistors set gain in amplifiers. <a href='https://www.electronics-tutorials.ws/opamp/opamp_2.html'>here</a>",
+        "c": "Not relevant in simulations.",
+        "d": "File format doesn't affect gain."
+      },
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },
+    {
+      "question": "What does bandwidth of an amplifier indicate in a simulation?",
+      "answers": {
+        "a": "Range of supply voltage",
+        "b": "Signal delay time",
+        "c": "Range of frequencies it can amplify effectively",
+        "d": "Circuit size"
+      },
+      "explanations": {
+        "a": "Bandwidth is unrelated to power supply range.",
+        "b": "Delay is related but not bandwidth directly.",
+        "c": "Correct. Bandwidth defines the effective frequency range. <a href='https://www.analog.com/en/technical-articles/understanding-op-amp-gain-and-bandwidth.html'>here</a>",
+        "d": "Physical size isn't part of bandwidth."
       },
       "correctAnswer": "c",
       "difficulty": "beginner"
