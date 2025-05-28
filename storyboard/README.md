@@ -4,41 +4,37 @@
 
 ## Storyboard
 
-Delete this line before submission : The core principle of storyboarding is to make the lab/experiment documentation elaborated in a manner that it makes easy for any person (developer/domain and non domain faculty/student) to understand and develop the lab/experiment.
-
 Experiment 1: Name of the Experiment
 
 ### 1. Story Outline
 
-Describe outline here ( Guide : The proposer should first draft the story outline for the proposed outline. This could be 2 or 3 paragraphs.)
+This experiment introduces students to the simulation of amplifier circuits, focusing on understanding their behavior and performance through virtual tools. The journey begins with setting up a basic amplifier circuit, followed by analyzing its characteristics, and concludes with evaluating its performance under various conditions. The simulation environment provides an interactive platform for students to experiment with different configurations and observe real-time results.
 
-### 2. Story
+### 2.Story
+This experiment introduces students to the simulation of amplifier circuits, focusing on understanding their behavior and performance through virtual tools. The journey begins with setting up a basic amplifier circuit, followed by analyzing its characteristics, and concludes with evaluating its performance under various conditions. The simulation environment provides an interactive platform for students to experiment with different configurations and observe real-time results. Story.
 
-Describe the Story introduction here (Guide : The next step is to write a story. Story should be a brief logical description in simple English. It should talk about the overall execution of the experiment in a simplified manner. (should not include any equations/ drawings). The story should include the following points) )
 
 #### 2.1 Set the Visual Stage Description:
-Describe here : (Guide : When a user lands up into a simulator, the visual stage is the first thing that user comes across. The visual stage should include all the elements to be seen by a user on an imaginary canvas.  (This should NOT include any drawings. ) )
-
+Upon launching the simulator, the user is presented with a clean workspace featuring a virtual breadboard, a component toolbar, and a simulation control panel. The workspace is set against a neutral background to minimize distractions. The component toolbar includes elements like resistors, capacitors, operational amplifiers, and signal sources. The simulation control panel offers options to run, pause, and reset the simulation, as well as to visualize waveforms and adjust parameters.
 #### 2.2 Set User Objectives & Goals:
-Describe the objectives and goals in details here : (Guide : The user should clearly understand the aims and objective of the experiment. ( how he will begin experiment. in descriptive))
-
+The primary objective of this experiment is to design and simulate an amplifier circuit, analyze its frequency response, and assess its performance under different conditions. The user will begin by selecting appropriate components from the toolbar and assembling them on the virtual breadboard. After configuring the circuit, the user will run the simulation to observe the output waveforms and make necessary adjustments to achieve desired specifications. The goal is to understand how component values influence amplifier behavior and to develop skills in circuit simulation and analysis.
 #### 2.3 Set the Pathway Activities:
 
-Describe the pathway activites here : (Guide : Set the pathway activities in line with the learning objectives (LOs)  & with a view to achieve the goals set in introductory & pedagogy documnets.  (once he begins, how he will traverse through the entire experiment ? in descriptive))
+Component Selection: User selects components from the panel (resistors, capacitors, op-amps). Circuit Building: User places components and makes connections on the digital workspace. Parameter Configuration: User assigns values (resistance, capacitance, input voltage). Simulation Execution: User runs the simulation to observe output characteristics. Analysis and Feedback: Output is displayed graphically, and feedback is provided. Design Optimization: User iteratively updates circuit design to meet goals
 
 ##### 2.4 Set Challenges and Questions/Complexity/Variations in Questions:
-
-Describe the challenges Here : (Guide : Set Challenges and Questions/Complexity/variations in questions according to User’s level, so as to invoke the learners’ interest.  (while traversing, what challenges he will face? how he has to solve and overcome ? descriptive).)
+Challenge 1: Achieving the desired gain with minimal distortion. The user must experiment with different resistor and capacitor values to find an optimal configuration.
+Challenge 2: Understanding the impact of component tolerances on circuit performance. The user can simulate variations in component values to observe their effects.
+Challenge 3: Designing a circuit that meets specific frequency response requirements. The user must adjust component values to achieve the desired bandwidth and phase margin.
 
 ##### 2.5 Allow pitfalls:
-Describe the pitfalls here: (Guide : while traversing or while solving challenge, how will we bring a situation in front of him that he commits mistake if he is not attentive , or not following procedure , descriptive)
-
+Pitfall 1: Incorrect component placement leading to circuit malfunction. The simulator provides visual feedback to help the user identify and correct such errors. Pitfall 2: Overdriving the amplifier, resulting in clipping or distortion. The user is encouraged to monitor output waveforms and adjust input levels accordingly. Pitfall 3: Neglecting to account for parasitic elements like stray capacitance, which can affect high-frequency performance. The simulator may highlight such effects to raise awareness
 ##### 2.6 Conclusion:
-Describe conclusion here : (Guide: This may include displaying: how much time did the user take to solve the questions/ How many questions were right?/ How many hints did the learner use. Based on this the evaluation/marking to be suggested to the user. (once he is towards the completion of the experiment, what LO he is taking along with him, what will be his probable, interpretation/conclusion , descriptive) )
+upon completing the experiment, the user will have gained practical experience in designing and simulating amplifier circuits. They will understand how component values influence amplifier performance and how to optimize circuits to meet specific requirements. The simulator's real-time feedback and analysis tools will have facilitated a deeper comprehension of amplifier behavior, preparing the user for more advanced topics in electronics.
 
 ##### 2.7 Equations/formulas: NA
-Type equations here : (Guide : ( a separate sheet having equations / programs for the lab exper3ment to be shared along with the Story submissions (1) . You can mark it as numerical reference numbers within the story narration (like we cite in the research papers) and then separately share these equations/programs sheets as a reference, do not include the equations as a whole in the narration))
-Tool can be used to integrate formula in Markdown <b> [here](http://latex.codecogs.com/eqneditor/samples/example3.php) </b>
+Equations like voltage gain 𝐴𝑣 = 𝑉out/Vin or bandwidth analysis are used separately in documentation.
+ [here](http://latex.codecogs.com/eqneditor/samples/example3.php) </b>
 
 
 ### 3. Flowchart
