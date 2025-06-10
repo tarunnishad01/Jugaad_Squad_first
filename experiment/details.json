@@ -1,0 +1,46 @@
+{
+
+   "details": [
+       {
+			"Experiment": "Full interactive simulink experiments (e.g. linearity /non-linearity test )",     
+			"Lab": "Digital system design",               
+			"Discipline": "Electronics Engineering",				 
+			"Technology": "HTML CSS Javascript"         
+       }
+   ],
+
+   "developer": [
+       {       
+      "Developer": "Mr. Rajeev Baghel",         
+      "Institute": "REC Kannauj",         
+      "InstituteAcronym": "RECK"   
+       }
+   ],
+
+   "contributer": [
+       {       
+			"Contributer": "Tarun",             
+      "Institute": "REC Kannauj",               
+			"InstituteAcronym": "RECK"         
+       },
+
+       {       
+			"Contributer": "Sachin yadav",              
+      "Institute": "REC Kannauj",               
+			"InstituteAcronym": "RECK"         
+       },
+
+       {       
+			"Contributer": "Mankesh Yadav",             
+      "Institute": "REC Kannauj",               
+			"InstituteAcronym": "RECK"         
+       },
+
+       {       
+			"Contributer": "Ravi Maurya",              
+      "Institute": "REC Kannauj",               
+			"InstituteAcronym": "RECK"         
+       }
+   ]
+
+}
