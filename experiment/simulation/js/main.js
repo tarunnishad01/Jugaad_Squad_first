@@ -1,994 +1,980 @@
-//Your JavaScript goes in here
-document.addEventListener('DOMContentLoaded', function () {
-    // DOM Elements
-    const workspace = document.getElementById('workspace');
-    const components = document.querySelectorAll('.component');
-    const simulateBtn = document.getElementById('simulate-btn');
-    const clearBtn = document.getElementById('clear-btn');
-    const sampleCeBtn = document.getElementById('sample-ce-btn');
-    const sampleOpampBtn = document.getElementById('sample-opamp-btn');
-    const modal = document.getElementById('properties-modal');
-    const closeBtn = document.querySelector('.close-btn');
-    const propertiesForm = document.getElementById('properties-form');
+const canvas = document.getElementById('circuitCanvas');
+const ctx = canvas.getContext('2d');
+const runSimulationBtn = document.getElementById('runSimulationBtn');
+const resetCircuitBtn = document.getElementById('resetCircuitBtn');
+const loadInvertingSampleBtn = document.getElementById('loadInvertingSampleBtn');
+const loadNonInvertingSampleBtn = document.getElementById('loadNonInvertingSampleBtn');
+const simulationResultsDiv = document.getElementById('simulationResults');
+const simulationOutputDiv = document.getElementById('simulationOutput');
+const componentPropertiesPanel = document.getElementById('componentProperties');
+const propertiesContentDiv = document.getElementById('propertiesContent');
+const closePropertiesBtn = document.getElementById('closePropertiesBtn');
 
-    // Simulation elements
-    const inputSignal = document.getElementById('input-signal');
-    const frequency = document.getElementById('frequency');
-    const amplitude = document.getElementById('amplitude');
-    const inputGraphCanvas = document.getElementById('input-graph');
-    const outputGraphCanvas = document.getElementById('output-graph');
-    const inputGraphCtx = inputGraphCanvas.getContext('2d');
-    const outputGraphCtx = outputGraphCanvas.getContext('2d');
-    const downloadInputBtn = document.getElementById('input-graph_downloadBtn');
-    const downloadOutputBtn = document.getElementById('output-graph_downloadBtn');
+let components = [];
+let wires = [];
+let selectedComponent = null;
+let isDraggingComponent = false;
+let dragOffsetX, dragOffsetY;
+let currentWireStartNode = null;
+let drawingWire = false;
+
+// Grid snap settings
+const GRID_SIZE = 20;
+
+// --- Voice Announcement Function ---
+function speakMessage(message) {
+    // Check if the SpeechSynthesis API is available
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(message);
+        // Optional: Set voice properties (e.g., language, pitch, rate)
+        // You might want to choose a specific voice if available
+        // let voices = speechSynthesis.getVoices();
+        // utterance.voice = voices.find(voice => voice.name === 'Google US English'); // Example voice
+        utterance.pitch = 1; // Default pitch
+        utterance.rate = 1; // Default rate
+
+        speechSynthesis.speak(utterance);
+    } else {
+        console.warn("SpeechSynthesis API not supported in this browser.");
+    }
+}
 
 
-    // Variables
-    let draggedComponent = null;
-    let currentElement = null;
-    let isDrawingWire = false;
-    let wireStartPoint = null;
-    let circuitElements = [];
-    let wires = [];
+// --- Utility Functions ---
+function getMousePos(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+    };
+}
 
-    // Initialize Chart.js graphs
-    let inputChart = new Chart(inputGraphCtx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Input Signal',
-                data: [],
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
+function snapToGrid(coord) {
+    return Math.round(coord / GRID_SIZE) * GRID_SIZE;
+}
+
+/**
+ * Finds a node connected to the given startNode via a wire,
+ * where the connected node belongs to a component of `targetComponentType`
+ * and optionally matches `targetNodePartId` (e.g., '-inv', '-nin', '-out').
+ *
+ * @param {object} startNode The node to start searching from.
+ * @param {string} targetComponentType The type of component the target node should belong to.
+ * @param {string|null} targetNodePartId Optional. A part of the target node's ID (e.g., '-inv' for inverting input).
+ * @returns {object|null} The connected node that matches the criteria, or null if not found.
+ */
+function findConnectedNode(startNode, targetComponentType, targetNodePartId = null) {
+    for (const wire of wires) {
+        let potentialConnectedNode = null;
+        if (wire.start === startNode) {
+            potentialConnectedNode = wire.end;
+        } else if (wire.end === startNode) {
+            potentialConnectedNode = wire.start;
+        }
+
+        if (potentialConnectedNode && potentialConnectedNode !== startNode) {
+            const connectedComponent = components.find(comp => comp.nodes.includes(potentialConnectedNode));
+            if (connectedComponent && connectedComponent.type === targetComponentType) {
+                if (targetNodePartId === null || potentialConnectedNode.id.includes(targetNodePartId)) {
+                    return potentialConnectedNode;
                 }
             }
         }
-    });
+    }
+    return null;
+}
 
-    let outputChart = new Chart(outputGraphCtx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Output Signal',
-                data: [],
-                borderColor: 'rgb(255, 99, 132)',
-                tension: 0.1,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+/**
+ * Finds a specific resistor connected between two nodes.
+ * @param {object} node1 First node of the connection.
+ * @param {object} node2 Second node of the connection.
+ * @param {Array} resistors A list of resistor components to search through.
+ * @param {string[]} excludeResistorIds Optional array of resistor IDs to exclude (to find unique resistors).
+ * @returns {object|null} The resistor component if found, otherwise null.
+ */
+function findResistorBetweenNodes(node1, node2, resistors, excludeResistorIds = []) {
+    for (const res of resistors) {
+        if (excludeResistorIds.includes(res.id)) {
+            continue; // Skip excluded resistors
         }
-    });
 
-    // Event Listeners for Components
-    components.forEach(component => {
-        component.addEventListener('dragstart', function (e) {
-            draggedComponent = this;
-            e.dataTransfer.setData('text/plain', this.dataset.type);
+        const resNodes = res.nodes;
+        // Check if resistor nodes are connected to node1 and node2
+        const isResNode1ConnectedToNode1 = wires.some(w => (w.start === resNodes[0] && w.end === node1) || (w.start === node1 && w.end === resNodes[0]));
+        const isResNode1ConnectedToNode2 = wires.some(w => (w.start === resNodes[0] && w.end === node2) || (w.start === node2 && w.end === resNodes[0]));
+
+        const isResNode2ConnectedToNode1 = wires.some(w => (w.start === resNodes[1] && w.end === node1) || (w.start === node1 && w.end === resNodes[1]));
+        const isResNode2ConnectedToNode2 = wires.some(w => (w.start === resNodes[1] && w.end === node2) || (w.start === node2 && w.end === resNodes[1]));
+
+        // Case 1: resNode[0] connects to node1 AND resNode[1] connects to node2
+        if (isResNode1ConnectedToNode1 && isResNode2ConnectedToNode2) {
+            return res;
+        }
+        // Case 2: resNode[0] connects to node2 AND resNode[1] connects to node1 (order reversed)
+        if (isResNode1ConnectedToNode2 && isResNode2ConnectedToNode1) {
+            return res;
+        }
+    }
+    return null;
+}
+
+
+// --- Component Classes ---
+class Component {
+    constructor(type, x, y, value = 1000) {
+        this.id = 'comp-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.width = 60;
+        this.height = 40;
+        this.value = value; // Value is only relevant for R, C, V sources
+        this.rotation = 0; // 0, 90, 180, 270 degrees
+        this.selected = false;
+        this.nodes = []; // Connection points for wires
+        this.generateNodes(); // Initialize nodes based on type
+    }
+
+    generateNodes() {
+        // Nodes are relative to the component's center (x, y)
+        this.nodes = [];
+        switch (this.type) {
+            case 'Resistor':
+            case 'Capacitor':
+            case 'VoltageSource':
+                this.nodes.push({ id: this.id + '-n1', x: this.x - this.width / 2, y: this.y, connectedWires: [] });
+                this.nodes.push({ id: this.id + '-n2', x: this.x + this.width / 2, y: this.y, connectedWires: [] });
+                break;
+            case 'OpAmp': // Ideal Op-Amp has 5 pins: Inverting (-), Non-inverting (+), Output, Vcc+, Vcc-
+                this.width = 80;
+                this.height = 80;
+                this.nodes.push({ id: this.id + '-nin', x: this.x - this.width / 2, y: this.y - this.height / 4, connectedWires: [] }); // Non-inverting (+)
+                this.nodes.push({ id: this.id + '-inv', x: this.x - this.width / 2, y: this.y + this.height / 4, connectedWires: [] }); // Inverting (-)
+                this.nodes.push({ id: this.id + '-out', x: this.x + this.width / 2, y: this.y, connectedWires: [] }); // Output
+                this.nodes.push({ id: this.id + '-vcc+', x: this.x, y: this.y - this.height / 2, connectedWires: [] }); // VCC+ (top)
+                this.nodes.push({ id: this.id + '-vcc-', x: this.x, y: this.y + this.height / 2, connectedWires: [] }); // VCC- (bottom)
+                break;
+            case 'Ground':
+                this.width = 40;
+                this.height = 40;
+                this.nodes.push({ id: this.id + '-gnd', x: this.x, y: this.y - this.height / 2, connectedWires: [] }); // Top connection point
+                break;
+            case 'Transistor': // NPN BJT for simplicity
+                this.width = 60;
+                this.height = 70; // Taller to accommodate three pins
+                // Nodes: Collector (top), Base (left), Emitter (bottom)
+                this.nodes.push({ id: this.id + '-collector', x: this.x, y: this.y - this.height / 2, connectedWires: [] });
+                this.nodes.push({ id: this.id + '-base', x: this.x - this.width / 2, y: this.y, connectedWires: [] });
+                this.nodes.push({ id: this.id + '-emitter', x: this.x, y: this.y + this.height / 2, connectedWires: [] });
+                break;
+        }
+    }
+
+    // Updates node positions after component moves
+    updateNodePositions() {
+        this.generateNodes(); // Re-generate nodes based on new x, y
+    }
+
+    draw(context) {
+        context.save();
+        context.translate(this.x, this.y);
+        context.rotate(this.rotation * Math.PI / 180);
+
+        context.font = '12px Inter';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.strokeStyle = '#000';
+        context.lineWidth = 2;
+
+        switch (this.type) {
+            case 'Resistor':
+                context.beginPath();
+                context.moveTo(-this.width / 2, 0);
+                context.lineTo(-this.width / 4, 0);
+                // Zig-zag
+                for (let i = 0; i < 3; i++) {
+                    context.lineTo(-this.width / 4 + (this.width / 6) * i, -this.height / 4);
+                    context.lineTo(-this.width / 4 + (this.width / 6) * i + (this.width / 12), this.height / 4);
+                }
+                context.lineTo(this.width / 4, 0);
+                context.lineTo(this.width / 2, 0);
+                context.stroke();
+                context.fillStyle = '#000';
+                context.fillText(`${this.value}Ω`, 0, this.height / 2 + 5);
+                break;
+            case 'Capacitor':
+                context.beginPath();
+                context.moveTo(-this.width / 2, 0);
+                context.lineTo(-10, 0);
+                context.moveTo(-10, -this.height / 2 + 5);
+                context.lineTo(-10, this.height / 2 - 5);
+                context.moveTo(10, -this.height / 2 + 5);
+                context.lineTo(10, this.height / 2 - 5);
+                context.lineTo(this.width / 2, 0); // No actual connection to right line
+                context.stroke();
+                context.fillStyle = '#000';
+                context.fillText(`${this.value}F`, 0, this.height / 2 + 5);
+                break;
+            case 'VoltageSource':
+                context.beginPath();
+                context.moveTo(-this.width / 2, 0);
+                context.lineTo(-this.width / 4, 0);
+                context.arc(0, 0, this.width / 4, 0, Math.PI * 2); // Circle for voltage source
+                context.moveTo(this.width / 4, 0);
+                context.lineTo(this.width / 2, 0);
+                // Plus and Minus signs
+                context.stroke();
+                context.fillStyle = '#000';
+                context.lineWidth = 1;
+                context.fillText('+', -this.width / 8, -this.height / 8);
+                context.fillText('-', this.width / 8, -this.height / 8);
+                context.fillText(`${this.value}V`, 0, this.height / 2 + 5);
+                break;
+            case 'OpAmp':
+                // Draw triangle
+                context.beginPath();
+                context.moveTo(-this.width / 2, -this.height / 2);
+                context.lineTo(this.width / 2, 0);
+                context.lineTo(-this.width / 2, this.height / 2);
+                context.closePath();
+                context.stroke();
+
+                // Input lines
+                context.beginPath();
+                context.moveTo(-this.width / 2 - 20, this.height / 4); // Inverting (-)
+                context.lineTo(-this.width / 2, this.height / 4);
+                context.moveTo(-this.width / 2 - 20, -this.height / 4); // Non-inverting (+)
+                context.lineTo(-this.width / 2, -this.height / 4);
+                context.stroke();
+
+                // Output line
+                context.beginPath();
+                context.moveTo(this.width / 2, 0);
+                context.lineTo(this.width / 2 + 20, 0);
+                context.stroke();
+
+                // Power lines (Vcc+ and Vcc-)
+                context.beginPath();
+                context.moveTo(0, -this.height / 2 - 20); // Vcc+
+                context.lineTo(0, -this.height / 2);
+                context.moveTo(0, this.height / 2 + 20); // Vcc-
+                context.lineTo(0, this.height / 2);
+                context.stroke();
+
+                // Labels for pins
+                context.fillStyle = '#000';
+                context.font = '16px Inter';
+                context.fillText('+', -this.width / 2 + 10, -this.height / 4 - 5);
+                context.fillText('-', -this.width / 2 + 10, this.height / 4 + 5);
+                context.font = '10px Inter';
+                context.fillText('V+', 0, -this.height / 2 + 10);
+                context.fillText('V-', 0, this.height / 2 - 10);
+                break;
+            case 'Ground':
+                context.beginPath();
+                // Main vertical line (connection point)
+                context.moveTo(0, -this.height / 2);
+                context.lineTo(0, this.height / 2);
+
+                // Horizontal lines (ground symbol)
+                context.moveTo(-this.width / 2, this.height / 2);
+                context.lineTo(this.width / 2, this.height / 2);
+
+                context.moveTo(-this.width / 3, this.height / 2 + 5);
+                context.lineTo(this.width / 3, this.height / 2 + 5);
+
+                context.moveTo(-this.width / 4, this.height / 2 + 10);
+                context.lineTo(this.width / 4, this.height / 2 + 10);
+                context.stroke();
+                break;
+            case 'Transistor': // NPN BJT Symbol
+                context.beginPath();
+                // Body circle
+                context.arc(0, 0, this.width / 2, 0, Math.PI * 2);
+
+                // Base line
+                context.moveTo(-this.width / 2 - 10, 0); // Extended line from base
+                context.lineTo(-this.width / 2, 0);
+                context.stroke();
+
+                // Collector line
+                context.beginPath();
+                context.moveTo(0, -this.height / 2);
+                context.lineTo(0, -10); // End of line inside circle
+                context.stroke();
+
+                // Emitter line with arrow
+                context.beginPath();
+                context.moveTo(0, this.height / 2);
+                context.lineTo(0, 10); // End of line inside circle
+                context.stroke();
+
+                // Arrow on Emitter for NPN (points outwards)
+                context.beginPath();
+                // Calculate arrow head coordinates for emitter (pointing away from base)
+                const arrowLength = 10;
+                const arrowAngle = Math.PI / 6; // 30 degrees
+                const emitterX = 0;
+                const emitterY = 10; // Point where line meets circle
+                const lineAngle = Math.PI / 2; // Vertical line (90 degrees)
+
+                context.moveTo(emitterX, emitterY);
+                context.lineTo(
+                    emitterX + arrowLength * Math.cos(lineAngle - arrowAngle),
+                    emitterY + arrowLength * Math.sin(lineAngle - arrowAngle)
+                );
+                context.moveTo(emitterX, emitterY);
+                context.lineTo(
+                    emitterX + arrowLength * Math.cos(lineAngle + arrowAngle),
+                    emitterY + arrowLength * Math.sin(lineAngle + arrowAngle)
+                );
+                context.stroke();
+
+                // Labels for pins (optional but helpful for transistors)
+                context.fillStyle = '#000';
+                context.font = '10px Inter';
+                context.textAlign = 'right';
+                context.fillText('B', -this.width / 2 - 5, 0); // Base
+                context.textAlign = 'center';
+                context.fillText('C', 0, -this.height / 2 - 5); // Collector
+                context.fillText('E', 0, this.height / 2 + 10); // Emitter
+                break;
+        }
+
+        context.restore(); // Restore context to original state
+
+        // Draw nodes as small circles (always visible)
+        this.nodes.forEach(node => {
+            context.beginPath();
+            context.arc(node.x, node.y, 4, 0, Math.PI * 2);
+            context.fillStyle = node.connectedWires.length > 0 ? '#3b82f6' : '#9ca3af'; // Blue if connected, gray if not
+            if (node === currentWireStartNode) {
+                context.fillStyle = '#ef4444'; // Red if active for wiring
+            }
+            context.fill();
+            context.strokeStyle = '#374151'; // Dark gray border
+            context.lineWidth = 1;
+            context.stroke();
         });
-    });
 
-    // Workspace Event Listeners
-    workspace.addEventListener('dragover', function (e) {
-        e.preventDefault();
-    });
-
-    workspace.addEventListener('drop', function (e) {
-        e.preventDefault();
-        const type = e.dataTransfer.getData('text/plain');
-        createCircuitElement(type, e.clientX - workspace.getBoundingClientRect().left, e.clientY - workspace.getBoundingClientRect().top);
-    });
-
-    workspace.addEventListener('mousedown', function (e) {
-        if (e.target.classList.contains('connection-point')) {
-            isDrawingWire = true;
-            const rect = e.target.getBoundingClientRect();
-            const workspaceRect = workspace.getBoundingClientRect();
-            wireStartPoint = {
-                x: rect.left - workspaceRect.left + rect.width / 2,
-                y: rect.top - workspaceRect.top + rect.height / 2,
-                element: e.target.parentElement,
-                connection: e.target
-            };
-
-            // Create a temporary wire starting point
-            const tempDot = document.createElement('div');
-            tempDot.className = 'wire-dot';
-            tempDot.style.left = `${wireStartPoint.x - 2}px`;
-            tempDot.style.top = `${wireStartPoint.y - 2}px`;
-            tempDot.id = 'wire-start-dot';
-            workspace.appendChild(tempDot);
-        } else if (e.target.classList.contains('circuit-element')) {
-            currentElement = e.target;
-            let offsetX = e.clientX - currentElement.getBoundingClientRect().left;
-            let offsetY = e.clientY - currentElement.getBoundingClientRect().top;
-
-            function moveElement(e) {
-                currentElement.style.left = `${e.clientX - workspace.getBoundingClientRect().left - offsetX}px`;
-                currentElement.style.top = `${e.clientY - workspace.getBoundingClientRect().top - offsetY}px`;
-                updateWires(); // Update wires when component moves
-            }
-
-            function stopMoving() {
-                workspace.removeEventListener('mousemove', moveElement);
-                workspace.removeEventListener('mouseup', stopMoving);
-                currentElement = null;
-            }
-
-            workspace.addEventListener('mousemove', moveElement);
-            workspace.addEventListener('mouseup', stopMoving);
+        if (this.selected) {
+            context.strokeStyle = '#4f46e5'; /* Indigo-600 */
+            context.lineWidth = 2;
+            context.setLineDash([5, 5]); // Dashed line for selection
+            context.strokeRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+            context.setLineDash([]); // Reset line dash
         }
-    });
-
-    workspace.addEventListener('mousemove', function (e) {
-        if (!isDrawingWire) return;
-
-        // Remove any previous temporary wire
-        const tempWire = document.querySelector('.temp-wire');
-        if (tempWire) tempWire.remove();
-
-        const workspaceRect = workspace.getBoundingClientRect();
-        const x = e.clientX - workspaceRect.left;
-        const y = e.clientY - workspaceRect.top;
-
-        // Calculate length and angle for the wire
-        const dx = x - wireStartPoint.x;
-        const dy = y - wireStartPoint.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
-
-        // Create a new temporary wire
-        const wire = document.createElement('div');
-        wire.className = 'wire temp-wire';
-        wire.style.left = `${wireStartPoint.x}px`;
-        wire.style.top = `${wireStartPoint.y}px`;
-        wire.style.width = `${length}px`;
-        wire.style.transform = `rotate(${angle}rad)`;
-
-        workspace.appendChild(wire);
-    });
-
-    workspace.addEventListener('mouseup', function (e) {
-        if (!isDrawingWire) return;
-
-        // Remove temporary elements
-        const tempWire = document.querySelector('.temp-wire');
-        const tempDot = document.getElementById('wire-start-dot');
-        if (tempWire) tempWire.remove();
-        if (tempDot) tempDot.remove();
-
-        // Check if we're ending on a connection point
-        if (e.target.classList.contains('connection-point')) {
-            const rect = e.target.getBoundingClientRect();
-            const workspaceRect = workspace.getBoundingClientRect();
-            const wireEndPoint = {
-                x: rect.left - workspaceRect.left + rect.width / 2,
-                y: rect.top - workspaceRect.top + rect.height / 2,
-                element: e.target.parentElement,
-                connection: e.target
-            };
-
-            // Don't connect to the same point or the same element
-            if (wireStartPoint.element !== wireEndPoint.element && wireStartPoint.connection !== wireEndPoint.connection) {
-                createWire(wireStartPoint, wireEndPoint);
-            }
-        }
-
-        isDrawingWire = false;
-        wireStartPoint = null;
-    });
-
-    // Update the createWire function:
-    function createWire(startPoint, endPoint) {
-        // Don't allow wires from a component to itself or to the same connection point
-        if (startPoint.element === endPoint.element && startPoint.connection === endPoint.connection) return;
-
-        const wire = document.createElement('div');
-        wire.className = 'wire';
-
-        // Store references to the connection points
-        wire.dataset.startElementId = startPoint.element.id || (startPoint.element.id = generateId());
-        wire.dataset.startConnectionId = startPoint.connection.id || (startPoint.connection.id = generateId());
-
-        wire.dataset.endElementId = endPoint.element.id || (endPoint.element.id = generateId());
-        wire.dataset.endConnectionId = endPoint.connection.id || (endPoint.connection.id = generateId());
-
-        workspace.appendChild(wire);
-        wires.push(wire);
-
-        // Update wire position immediately after creation
-        updateWirePosition(wire, startPoint, endPoint);
     }
 
-    function updateWirePosition(wire, startPoint, endPoint) {
-        const workspaceRect = workspace.getBoundingClientRect();
-
-        // Recalculate coordinates relative to the workspace for the connection points
-        const startRect = startPoint.connection.getBoundingClientRect();
-        const endRect = endPoint.connection.getBoundingClientRect();
-
-        const x1 = startRect.left - workspaceRect.left + startRect.width / 2;
-        const y1 = startRect.top - workspaceRect.top + startRect.height / 2;
-        const x2 = endRect.left - workspaceRect.left + endRect.width / 2;
-        const y2 = endRect.top - workspaceRect.top + endRect.height / 2;
-
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
-
-        wire.style.left = `${x1}px`;
-        wire.style.top = `${y1}px`;
-        wire.style.width = `${length}px`;
-        wire.style.transform = `rotate(${angle}rad)`;
-        wire.style.transformOrigin = '0 0';
+    isClicked(mouseX, mouseY) {
+        // Check if click is within component's bounding box
+        return mouseX >= this.x - this.width / 2 &&
+               mouseX <= this.x + this.width / 2 &&
+               mouseY >= this.y - this.height / 2 &&
+               mouseY <= this.y + this.height / 2;
     }
 
-    function updateWires() {
-        wires.forEach(wire => {
-            const startElement = document.getElementById(wire.dataset.startElementId);
-            const startConnection = document.getElementById(wire.dataset.startConnectionId);
-            const endElement = document.getElementById(wire.dataset.endElementId);
-            const endConnection = document.getElementById(wire.dataset.endConnectionId);
+    getClosestNode(mouseX, mouseY, maxDistance = 10) {
+        for (const node of this.nodes) {
+            const dist = Math.sqrt(Math.pow(mouseX - node.x, 2) + Math.pow(mouseY - node.y, 2));
+            if (dist < maxDistance) {
+                return node;
+            }
+        }
+        return null;
+    }
+}
 
-            if (startElement && startConnection && endElement && endConnection) {
-                updateWirePosition(wire, { element: startElement, connection: startConnection }, { element: endElement, connection: endConnection });
+class Wire {
+    constructor(startNode, endNode) {
+        this.id = 'wire-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        this.start = startNode;
+        this.end = endNode;
+        // Add this wire to the connectedWires array of its nodes
+        if (this.start) this.start.connectedWires.push(this);
+        if (this.end) this.end.connectedWires.push(this);
+    }
+
+    draw(context) {
+        if (!this.start || !this.end) return; // Don't draw incomplete wires
+
+        context.strokeStyle = '#3b82f6'; /* Blue-500 */
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(this.start.x, this.start.y);
+        context.lineTo(this.end.x, this.end.y);
+        context.stroke();
+    }
+
+    // Remove this wire from its connected nodes' wire lists
+    disconnect() {
+        if (this.start) {
+            this.start.connectedWires = this.start.connectedWires.filter(w => w !== this);
+        }
+        if (this.end) {
+            this.end.connectedWires = this.end.connectedWires.filter(w => w !== this);
+        }
+    }
+}
+
+
+// --- Canvas Drawing Function ---
+function drawCircuit() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+    // Draw grid
+    ctx.strokeStyle = '#e2e8f0'; // Gray-200
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < canvas.width; i += GRID_SIZE) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+    }
+    for (let i = 0; i < canvas.height; i += GRID_SIZE) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(canvas.width, i);
+        ctx.stroke();
+    }
+
+    // Draw all components
+    components.forEach(comp => comp.draw(ctx));
+
+    // Draw all wires
+    wires.forEach(wire => wire.draw(ctx));
+
+    // If a wire is currently being drawn
+    if (drawingWire && currentWireStartNode) {
+        ctx.strokeStyle = '#ef4444'; /* Red-500 */
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        const mousePos = getMousePos(event);
+        ctx.moveTo(currentWireStartNode.x, currentWireStartNode.y);
+        ctx.lineTo(mousePos.x, mousePos.y);
+        ctx.stroke();
+    }
+}
+
+// --- Event Listeners ---
+
+// Handle drag over canvas (allow drop)
+canvas.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+});
+
+// Handle drop on canvas (create new component)
+canvas.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const componentType = e.dataTransfer.getData('text/plain');
+    const mousePos = getMousePos(e);
+    const snappedX = snapToGrid(mousePos.x);
+    const snappedY = snapToGrid(mousePos.y);
+
+    const newComponent = new Component(componentType, snappedX, snappedY);
+    components.push(newComponent);
+    drawCircuit();
+});
+
+// Handle drag start from component icons
+document.querySelectorAll('.component-icon').forEach(icon => {
+    icon.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', e.target.dataset.componentType);
+    });
+});
+
+// Handle mouse down on canvas (for selecting, dragging, or starting wire)
+canvas.addEventListener('mousedown', (e) => {
+    const mousePos = getMousePos(e);
+
+    // Check if clicking on an existing wire node
+    for (const comp of components) {
+        const node = comp.getClosestNode(mousePos.x, mousePos.y);
+        if (node) {
+            currentWireStartNode = node;
+            drawingWire = true;
+            // Mark the node as active for visual feedback
+            drawCircuit(); // Redraw to show active node
+            return; // Don't proceed to component drag/select
+        }
+    }
+
+    // Check if clicking on an existing component
+    selectedComponent = null;
+    let componentClicked = false;
+    for (let i = components.length - 1; i >= 0; i--) { // Iterate backwards to select top-most
+        const comp = components[i];
+        if (comp.isClicked(mousePos.x, mousePos.y)) {
+            selectedComponent = comp;
+            isDraggingComponent = true;
+            dragOffsetX = mousePos.x - comp.x;
+            dragOffsetY = mousePos.y - comp.y;
+            componentClicked = true;
+            // Deselect all others
+            components.forEach(c => c.selected = false);
+            selectedComponent.selected = true;
+            // Only show properties for components that have adjustable values
+            if (selectedComponent.type !== 'Ground' && selectedComponent.type !== 'OpAmp' && selectedComponent.type !== 'Transistor') {
+                showComponentProperties(selectedComponent); // Show properties on click
             } else {
-                // If an element or connection point is missing (e.g., deleted), remove the wire
-                wire.remove();
-                wires = wires.filter(w => w !== wire);
+                hideComponentProperties(); // Hide properties for ground, OpAmp, and Transistor
             }
-        });
-    }
-
-    // Button Event Listeners
-    simulateBtn.addEventListener('click', simulateCircuit);
-    clearBtn.addEventListener('click', clearWorkspace);
-    sampleCeBtn.addEventListener('click', createSampleCeAmplifier);
-    sampleOpampBtn.addEventListener('click', createSampleOpAmp);
-    downloadInputBtn.addEventListener('click', () => downloadGraph(inputGraphCanvas, 'input-signal'));
-    downloadOutputBtn.addEventListener('click', () => downloadGraph(outputGraphCanvas, 'output-signal'));
-
-    // Modal Event Listeners
-    closeBtn.addEventListener('click', function () {
-        modal.style.display = 'none';
-    });
-
-    window.addEventListener('click', function (e) {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    propertiesForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        saveProperties();
-        modal.style.display = 'none';
-    });
-
-    // Functions
-    function createCircuitElement(type, x, y) {
-        const element = document.createElement('div');
-        element.className = `circuit-element ${type}`;
-        element.dataset.type = type;
-        element.style.left = `${x}px`;
-        element.style.top = `${y}px`;
-        element.id = generateId(); // Assign a unique ID
-
-        // Add connection points based on component type
-        switch (type) {
-            case 'resistor':
-                element.innerHTML = `
-                    <div class="connection-point" style="left: -4px; top: 8px;"></div>
-                    <div class="connection-point" style="right: -4px; top: 8px;"></div>
-                `;
-                element.dataset.resistance = '1000'; // Default 1k ohm
-                break;
-
-            case 'capacitor':
-                element.innerHTML = `
-                    <div class="connection-point" style="left: -4px; top: 18px;"></div>
-                    <div class="connection-point" style="right: -4px; top: 18px;"></div>
-                `;
-                element.dataset.capacitance = '0.000001'; // Default 1μF
-                break;
-
-            case 'transistor':
-                element.innerHTML = `
-                    <div class="connection-point" style="left: 18px; top: -4px;">B</div>
-                    <div class="connection-point" style="left: -4px; bottom: -4px;">E</div>
-                    <div class="connection-point" style="right: -4px; bottom: -4px;">C</div>
-                `;
-                element.dataset.transistorType = 'npn'; // Changed to transistorType to avoid conflict with dataset.type
-                element.dataset.beta = '100'; // Default beta value
-                break;
-
-            case 'opamp':
-                element.innerHTML = `
-                    <div class="connection-point" style="left: 30px; top: -4px;">+</div>
-                    <div class="connection-point" style="left: 30px; bottom: -4px;">-</div>
-                    <div class="connection-point" style="right: -4px; top: 30px;">Out</div>
-                    <div class="connection-point" style="left: -4px; top: 15px;">V+</div>
-                    <div class="connection-point" style="left: -4px; top: 45px;">V-</div>
-                `;
-                element.dataset.gain = '100000'; // Default open-loop gain
-                break;
-
-            case 'voltage':
-                element.innerHTML = `
-                    <div class="connection-point" style="left: 20px; top: -4px;">+</div>
-                    <div class="connection-point" style="left: 20px; bottom: -4px;">-</div>
-                `;
-                element.dataset.voltage = '9'; // Default 9V
-                break;
-
-            case 'ground':
-                element.innerHTML = `
-                    <div class="connection-point" style="left: 20px; top: -4px;"></div>
-                `;
-                break;
-
-            case 'wire':
-                // Wires are handled separately
-                return;
-        }
-
-        // Double-click to edit properties
-        element.addEventListener('dblclick', function () {
-            showPropertiesModal(this);
-        });
-
-        workspace.appendChild(element);
-        circuitElements.push(element);
-
-        // Assign IDs to connection points and add event listeners
-        const connectionPoints = element.querySelectorAll('.connection-point');
-        connectionPoints.forEach(point => {
-            point.id = generateId(); // Assign unique ID to connection points
-            point.addEventListener('mousedown', function (e) {
-                e.stopPropagation(); // Prevent triggering workspace mousedown
-            });
-            point.addEventListener('mouseup', function (e) {
-                e.stopPropagation(); // Prevent triggering workspace mouseup
-            });
-        });
-    }
-
-    function generateId() {
-        return 'id_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    function showPropertiesModal(element) {
-        currentElement = element;
-        const type = element.dataset.type;
-        const modalTitle = document.getElementById('modal-title');
-        const propertiesFields = document.getElementById('properties-fields');
-
-        modalTitle.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Properties`;
-        propertiesFields.innerHTML = '';
-
-        switch (type) {
-            case 'resistor':
-                propertiesFields.innerHTML = `
-                    <label for="resistance">Resistance (Ω):</label>
-                    <input type="number" id="resistance" value="${element.dataset.resistance}" min="1" step="1">
-                `;
-                break;
-
-            case 'capacitor':
-                propertiesFields.innerHTML = `
-                    <label for="capacitance">Capacitance (F):</label>
-                    <input type="number" id="capacitance" value="${element.dataset.capacitance}" min="0.000000001" step="0.000000001">
-                `;
-                break;
-
-            case 'transistor':
-                propertiesFields.innerHTML = `
-                    <label for="transistor-type">Type:</label>
-                    <select id="transistor-type">
-                        <option value="npn" ${element.dataset.transistorType === 'npn' ? 'selected' : ''}>NPN</option>
-                        <option value="pnp" ${element.dataset.transistorType === 'pnp' ? 'selected' : ''}>PNP</option>
-                    </select>
-                    <label for="beta">Beta (β):</label>
-                    <input type="number" id="beta" value="${element.dataset.beta}" min="20" max="1000" step="1">
-                `;
-                break;
-
-            case 'opamp':
-                propertiesFields.innerHTML = `
-                    <label for="gain">Open-loop Gain:</label>
-                    <input type="number" id="gain" value="${element.dataset.gain}" min="1000" step="1000">
-                `;
-                break;
-
-            case 'voltage':
-                propertiesFields.innerHTML = `
-                    <label for="voltage">Voltage (V):</label>
-                    <input type="number" id="voltage" value="${element.dataset.voltage}" min="0.1" max="100" step="0.1">
-                `;
-                break;
-        }
-
-        modal.style.display = 'block';
-    }
-
-    function saveProperties() {
-        if (!currentElement) return;
-
-        const type = currentElement.dataset.type;
-
-        switch (type) {
-            case 'resistor':
-                currentElement.dataset.resistance = document.getElementById('resistance').value;
-                break;
-
-            case 'capacitor':
-                currentElement.dataset.capacitance = document.getElementById('capacitance').value;
-                break;
-
-            case 'transistor':
-                currentElement.dataset.transistorType = document.getElementById('transistor-type').value;
-                currentElement.dataset.beta = document.getElementById('beta').value;
-                break;
-
-            case 'opamp':
-                currentElement.dataset.gain = document.getElementById('gain').value;
-                break;
-
-            case 'voltage':
-                currentElement.dataset.voltage = document.getElementById('voltage').value;
-                break;
+            break;
         }
     }
 
-    function simulateCircuit() {
-        // In a real application, this would send the circuit data to a simulation engine
-        // For this demo, we'll just generate some sample waveforms
-
-        const freq = parseFloat(frequency.value);
-        const amp = parseFloat(amplitude.value);
-        const signalType = inputSignal.value;
-
-        // Generate input signal data
-        const timePoints = [];
-        const inputData = [];
-        const outputData = [];
-
-        // Simple simulation - output is just amplified input with some distortion
-        for (let i = 0; i < 100; i++) {
-            const t = i / 100 * 2 * Math.PI;
-            timePoints.push(i);
-
-            let inputValue;
-            switch (signalType) {
-                case 'sine':
-                    inputValue = amp * Math.sin(freq * t);
-                    break;
-                case 'square':
-                    inputValue = amp * (Math.sin(freq * t) > 0 ? amp : -amp);
-                    break;
-                case 'triangle':
-                    inputValue = (2 * amp / Math.PI) * Math.asin(Math.sin(freq * t));
-                    break;
-                default:
-                    inputValue = amp * Math.sin(freq * t);
-            }
-
-            inputData.push(inputValue);
-
-            // Simple amplifier model with clipping
-            let gain = 5; // Default gain
-            let outputValue = inputValue * gain;
-
-            // Check for clipping (assuming ±12V power supply)
-            if (outputValue > 12) outputValue = 12;
-            if (outputValue < -12) outputValue = -12;
-
-            // Add some noise
-            outputValue += (Math.random() - 0.5) * 0.2;
-
-            outputData.push(outputValue);
-        }
-
-        // Update charts
-        inputChart.data.labels = timePoints;
-        inputChart.data.datasets[0].data = inputData;
-        inputChart.update();
-
-        outputChart.data.labels = timePoints;
-        outputChart.data.datasets[0].data = outputData;
-        outputChart.update();
-
-        // Update measurements (simplified)
-        document.getElementById('gain-value').textContent = (20 * Math.log10(5)).toFixed(1); // 5x gain in dB
-        document.getElementById('bandwidth-value').textContent = (freq * 10).toFixed(0);
-        document.getElementById('input-z-value').textContent = '1000';
-        document.getElementById('output-z-value').textContent = '100';
+    if (!componentClicked) {
+        // If clicked outside any component, deselect all and hide properties
+        components.forEach(c => c.selected = false);
+        selectedComponent = null;
+        hideComponentProperties();
     }
+    drawCircuit();
+});
 
-    function downloadGraph(canvas, filename) {
-        const image = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = image;
-        link.download = `${filename}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+// Handle mouse move on canvas (for dragging component or drawing wire)
+canvas.addEventListener('mousemove', (e) => {
+    const mousePos = getMousePos(e);
 
-    function clearWorkspace() {
-        workspace.innerHTML = '<div class="grid-overlay"></div>';
-        circuitElements = [];
-        wires = [];
-
-        // Clear graphs
-        inputChart.data.labels = [];
-        inputChart.data.datasets[0].data = [];
-        inputChart.update();
-
-        outputChart.data.labels = [];
-        outputChart.data.datasets[0].data = [];
-        outputChart.update();
-    }
-
-    function createSampleCeAmplifier() {
-        clearWorkspace();
-
-        // Create components
-        const transistor = document.createElement('div');
-        transistor.className = 'circuit-element transistor';
-        transistor.dataset.type = 'transistor';
-        transistor.dataset.transistorType = 'npn'; // Use transistorType
-        transistor.dataset.beta = '100';
-        transistor.style.left = '200px';
-        transistor.style.top = '150px';
-        transistor.id = generateId(); // Assign ID
-        transistor.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 18px; top: -4px;">B</div>
-            <div class="connection-point" id="${generateId()}" style="left: -4px; bottom: -4px;">E</div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; bottom: -4px;">C</div>
-        `;
-        workspace.appendChild(transistor);
-        circuitElements.push(transistor);
-
-        const rc = document.createElement('div');
-        rc.className = 'circuit-element resistor';
-        rc.dataset.type = 'resistor';
-        rc.dataset.resistance = '2200';
-        rc.style.left = '270px';
-        rc.style.top = '120px';
-        rc.id = generateId(); // Assign ID
-        rc.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 8px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 8px;"></div>
-        `;
-        workspace.appendChild(rc);
-        circuitElements.push(rc);
-
-        const re = document.createElement('div');
-        re.className = 'circuit-element resistor';
-        re.dataset.type = 'resistor';
-        re.dataset.resistance = '1000';
-        re.style.left = '150px';
-        re.style.top = '220px';
-        re.id = generateId(); // Assign ID
-        re.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 8px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 8px;"></div>
-        `;
-        workspace.appendChild(re);
-        circuitElements.push(re);
-
-        const rb1 = document.createElement('div');
-        rb1.className = 'circuit-element resistor';
-        rb1.dataset.type = 'resistor';
-        rb1.dataset.resistance = '10000';
-        rb1.style.left = '50px';
-        rb1.style.top = '50px';
-        rb1.id = generateId(); // Assign ID
-        rb1.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 8px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 8px;"></div>
-        `;
-        workspace.appendChild(rb1);
-        circuitElements.push(rb1);
-
-        const rb2 = document.createElement('div');
-        rb2.className = 'circuit-element resistor';
-        rb2.dataset.type = 'resistor';
-        rb2.dataset.resistance = '10000';
-        rb2.style.left = '50px';
-        rb2.style.top = '100px';
-        rb2.id = generateId(); // Assign ID
-        rb2.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 8px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 8px;"></div>
-        `;
-        workspace.appendChild(rb2);
-        circuitElements.push(rb2);
-
-        const cc1 = document.createElement('div');
-        cc1.className = 'circuit-element capacitor';
-        cc1.dataset.type = 'capacitor';
-        cc1.dataset.capacitance = '0.00001';
-        cc1.style.left = '50px';
-        cc1.style.top = '200px';
-        cc1.id = generateId(); // Assign ID
-        cc1.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 18px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 18px;"></div>
-        `;
-        workspace.appendChild(cc1);
-        circuitElements.push(cc1);
-
-        const cc2 = document.createElement('div');
-        cc2.className = 'circuit-element capacitor';
-        cc2.dataset.type = 'capacitor';
-        cc2.dataset.capacitance = '0.00001';
-        cc2.style.left = '270px';
-        cc2.style.top = '200px';
-        cc2.id = generateId(); // Assign ID
-        cc2.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 18px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 18px;"></div>
-        `;
-        workspace.appendChild(cc2);
-        circuitElements.push(cc2);
-
-        const ce = document.createElement('div');
-        ce.className = 'circuit-element capacitor';
-        ce.dataset.type = 'capacitor';
-        ce.dataset.capacitance = '0.0001';
-        ce.style.left = '150px';
-        ce.style.top = '270px';
-        ce.id = generateId(); // Assign ID
-        ce.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 18px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 18px;"></div>
-        `;
-        workspace.appendChild(ce);
-        circuitElements.push(ce);
-
-        const voltageSource = document.createElement('div');
-        voltageSource.className = 'circuit-element voltage';
-        voltageSource.dataset.type = 'voltage';
-        voltageSource.dataset.voltage = '12';
-        voltageSource.style.left = '200px';
-        voltageSource.style.top = '20px';
-        voltageSource.id = generateId(); // Assign ID
-        voltageSource.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 20px; top: -4px;">+</div>
-            <div class="connection-point" id="${generateId()}" style="left: 20px; bottom: -4px;">-</div>
-        `;
-        workspace.appendChild(voltageSource);
-        circuitElements.push(voltageSource);
-
-        const ground = document.createElement('div');
-        ground.className = 'circuit-element ground';
-        ground.dataset.type = 'ground';
-        ground.style.left = '100px';
-        ground.style.top = '320px';
-        ground.id = generateId(); // Assign ID
-        ground.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 20px; top: -4px;"></div>
-        `;
-        workspace.appendChild(ground);
-        circuitElements.push(ground);
-
-        // Make elements draggable and add double-click listener
-        [transistor, rc, re, rb1, rb2, cc1, cc2, ce, voltageSource, ground].forEach(el => {
-            el.addEventListener('dblclick', function () {
-                showPropertiesModal(this);
-            });
-            // Ensure connection points have event listeners
-            el.querySelectorAll('.connection-point').forEach(point => {
-                point.addEventListener('mousedown', function (e) {
-                    e.stopPropagation();
-                });
-                point.addEventListener('mouseup', function (e) {
-                    e.stopPropagation();
-                });
-            });
-        });
-
-        // Helper to get connection point by element and text content
-        const getConnectionPoint = (element, textContent) => {
-            return Array.from(element.querySelectorAll('.connection-point')).find(point => point.textContent === textContent);
-        };
-        const getConnectionPointByIndex = (element, index) => {
-            return element.querySelectorAll('.connection-point')[index];
-        };
-
-
-        // Connect components for CE Amplifier
-        // VCC to Rc
-        createWire(
-            { element: voltageSource, connection: getConnectionPoint(voltageSource, '+') },
-            { element: rc, connection: getConnectionPointByIndex(rc, 0) }
-        );
-
-        // Rc to Collector
-        createWire(
-            { element: rc, connection: getConnectionPointByIndex(rc, 1) },
-            { element: transistor, connection: getConnectionPoint(transistor, 'C') }
-        );
-
-        // Emitter to Re
-        createWire(
-            { element: transistor, connection: getConnectionPoint(transistor, 'E') },
-            { element: re, connection: getConnectionPointByIndex(re, 0) }
-        );
-
-        // Re to Ce
-        createWire(
-            { element: re, connection: getConnectionPointByIndex(re, 1) },
-            { element: ce, connection: getConnectionPointByIndex(ce, 0) }
-        );
-
-        // Ce to Ground
-        createWire(
-            { element: ce, connection: getConnectionPointByIndex(ce, 1) },
-            { element: ground, connection: getConnectionPointByIndex(ground, 0) }
-        );
-
-        // Voltage Source negative to Ground
-        createWire(
-            { element: voltageSource, connection: getConnectionPoint(voltageSource, '-') },
-            { element: ground, connection: getConnectionPointByIndex(ground, 0) }
-        );
-
-        // Rb1 top to VCC
-        createWire(
-            { element: rb1, connection: getConnectionPointByIndex(rb1, 0) },
-            { element: voltageSource, connection: getConnectionPoint(voltageSource, '+') }
-        );
-
-        // Rb1 bottom to Rb2 top
-        createWire(
-            { element: rb1, connection: getConnectionPointByIndex(rb1, 1) },
-            { element: rb2, connection: getConnectionPointByIndex(rb2, 0) }
-        );
-
-        // Rb2 bottom to Ground
-        createWire(
-            { element: rb2, connection: getConnectionPointByIndex(rb2, 1) },
-            { element: ground, connection: getConnectionPointByIndex(ground, 0) }
-        );
-
-        // Base to Rb1/Rb2 junction (connecting to Rb1 bottom, Rb2 top)
-        createWire(
-            { element: transistor, connection: getConnectionPoint(transistor, 'B') },
-            { element: rb1, connection: getConnectionPointByIndex(rb1, 1) }
-        );
-
-        // Base to Cc1 output (Cc1 to Base)
-        createWire(
-            { element: cc1, connection: getConnectionPointByIndex(cc1, 1) },
-            { element: transistor, connection: getConnectionPoint(transistor, 'B') }
-        );
-
-        // Cc1 input (This would normally connect to an input signal, leaving floating for now or connecting to an arbitrary point for demo)
-        // For demonstration, let's connect it to a dummy point or imply an input source.
-        // For now, no explicit source element is created for the input signal in this sample,
-        // so we'll just ensure the connection logic is there if you add one later.
-
-        // Cc2 input to Collector
-        createWire(
-            { element: cc2, connection: getConnectionPointByIndex(cc2, 0) },
-            { element: transistor, connection: getConnectionPoint(transistor, 'C') }
-        );
-
-        // Cc2 output (This would be your output signal, leaving floating or connecting to an arbitrary point for demo)
-
-        // Ensure all newly added elements are part of circuitElements
-        updateWires();
-    }
-
-    function createSampleOpAmp() {
-        clearWorkspace();
-
-        // Create Op-Amp
-        const opamp = document.createElement('div');
-        opamp.className = 'circuit-element opamp';
-        opamp.dataset.type = 'opamp';
-        opamp.dataset.gain = '200000';
-        opamp.style.left = '250px';
-        opamp.style.top = '150px';
-        opamp.id = generateId(); // Assign ID
-        opamp.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 30px; top: -4px;">+</div>
-            <div class="connection-point" id="${generateId()}" style="left: 30px; bottom: -4px;">-</div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 30px;">Out</div>
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 15px;">V+</div>
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 45px;">V-</div>
-        `;
-        workspace.appendChild(opamp);
-        circuitElements.push(opamp);
-
-        // Create Resistors for Feedback and Input (Inverting Op-Amp Configuration)
-        const r_in = document.createElement('div');
-        r_in.className = 'circuit-element resistor';
-        r_in.dataset.type = 'resistor';
-        r_in.dataset.resistance = '10000'; // 10kΩ
-        r_in.style.left = '100px';
-        r_in.style.top = '150px';
-        r_in.id = generateId(); // Assign ID
-        r_in.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 8px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 8px;"></div>
-        `;
-        workspace.appendChild(r_in);
-        circuitElements.push(r_in);
-
-        const r_f = document.createElement('div');
-        r_f.className = 'circuit-element resistor';
-        r_f.dataset.type = 'resistor';
-        r_f.dataset.resistance = '100000'; // 100kΩ
-        r_f.style.left = '320px';
-        r_f.style.top = '70px';
-        r_f.id = generateId(); // Assign ID
-        r_f.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: -4px; top: 8px;"></div>
-            <div class="connection-point" id="${generateId()}" style="right: -4px; top: 8px;"></div>
-        `;
-        workspace.appendChild(r_f);
-        circuitElements.push(r_f);
-
-        // Voltage Source (for V+)
-        const vcc = document.createElement('div');
-        vcc.className = 'circuit-element voltage';
-        vcc.dataset.type = 'voltage';
-        vcc.dataset.voltage = '15';
-        vcc.style.left = '400px';
-        vcc.style.top = '50px';
-        vcc.id = generateId(); // Assign ID
-        vcc.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 20px; top: -4px;">+</div>
-            <div class="connection-point" id="${generateId()}" style="left: 20px; bottom: -4px;">-</div>
-        `;
-        workspace.appendChild(vcc);
-        circuitElements.push(vcc);
-
-        // Voltage Source (for V-)
-        const vee = document.createElement('div');
-        vee.className = 'circuit-element voltage';
-        vee.dataset.type = 'voltage';
-        vee.dataset.voltage = '-15'; // Negative voltage
-        vee.style.left = '400px';
-        vee.style.top = '250px';
-        vee.id = generateId(); // Assign ID
-        vee.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 20px; top: -4px;">+</div>
-            <div class="connection-point" id="${generateId()}" style="left: 20px; bottom: -4px;">-</div>
-        `;
-        workspace.appendChild(vee);
-        circuitElements.push(vee);
-
-        // Ground
-        const ground = document.createElement('div');
-        ground.className = 'circuit-element ground';
-        ground.dataset.type = 'ground';
-        ground.style.left = '100px';
-        ground.style.top = '300px';
-        ground.id = generateId(); // Assign ID
-        ground.innerHTML = `
-            <div class="connection-point" id="${generateId()}" style="left: 20px; top: -4px;"></div>
-        `;
-        workspace.appendChild(ground);
-        circuitElements.push(ground);
-
-
-        // Make elements draggable and add double-click listener
-        [opamp, r_in, r_f, vcc, vee, ground].forEach(el => {
-            el.addEventListener('dblclick', function () {
-                showPropertiesModal(this);
-            });
-            el.querySelectorAll('.connection-point').forEach(point => {
-                point.addEventListener('mousedown', function (e) {
-                    e.stopPropagation();
-                });
-                point.addEventListener('mouseup', function (e) {
-                    e.stopPropagation();
-                });
-            });
-        });
-
-        // Helper to get connection point by element and text content
-        const getConnectionPoint = (element, textContent) => {
-            return Array.from(element.querySelectorAll('.connection-point')).find(point => point.textContent === textContent);
-        };
-        const getConnectionPointByIndex = (element, index) => {
-            return element.querySelectorAll('.connection-point')[index];
-        };
-
-        // Connect components for Inverting Op-Amp
-        // R_in left to an assumed input signal (not explicitly placed, but connectable)
-        // R_in right to Op-Amp Inverting Input (-)
-        createWire(
-            { element: r_in, connection: getConnectionPointByIndex(r_in, 1) },
-            { element: opamp, connection: getConnectionPoint(opamp, '-') }
-        );
-
-        // Op-Amp Non-Inverting Input (+) to Ground
-        createWire(
-            { element: opamp, connection: getConnectionPoint(opamp, '+') },
-            { element: ground, connection: getConnectionPointByIndex(ground, 0) }
-        );
-
-        // R_f left to Op-Amp Inverting Input (-)
-        createWire(
-            { element: r_f, connection: getConnectionPointByIndex(r_f, 0) },
-            { element: opamp, connection: getConnectionPoint(opamp, '-') }
-        );
-
-        // R_f right to Op-Amp Output
-        createWire(
-            { element: r_f, connection: getConnectionPointByIndex(r_f, 1) },
-            { element: opamp, connection: getConnectionPoint(opamp, 'Out') }
-        );
-
-        // VCC positive to Op-Amp V+
-        createWire(
-            { element: vcc, connection: getConnectionPoint(vcc, '+') },
-            { element: opamp, connection: getConnectionPoint(opamp, 'V+') }
-        );
-
-        // VCC negative to ground
-        createWire(
-            { element: vcc, connection: getConnectionPoint(vcc, '-') },
-            { element: ground, connection: getConnectionPointByIndex(ground, 0) }
-        );
-
-        // VEE negative to Op-Amp V-
-        createWire(
-            { element: vee, connection: getConnectionPoint(vee, '-') },
-            { element: opamp, connection: getConnectionPoint(opamp, 'V-') }
-        );
-
-        // VEE positive to ground
-        createWire(
-            { element: vee, connection: getConnectionPoint(vee, '+') },
-            { element: ground, connection: getConnectionPointByIndex(ground, 0) }
-        );
-
-        updateWires();
+    if (isDraggingComponent && selectedComponent) {
+        selectedComponent.x = snapToGrid(mousePos.x - dragOffsetX);
+        selectedComponent.y = snapToGrid(mousePos.y - dragOffsetY);
+        selectedComponent.updateNodePositions(); // Update node positions when component moves
+        drawCircuit();
+    } else if (drawingWire && currentWireStartNode) {
+        drawCircuit(); // Redraw to show the rubber-banding wire
     }
 });
 
-// // dark mode conver
-//   const toggleButton = document.getElementById("theme-toggle");
+// Handle mouse up on canvas (stop dragging or finalize wire)
+canvas.addEventListener('mouseup', (e) => {
+    const mousePos = getMousePos(e);
 
-//   toggleButton.addEventListener("click", () => {
-//     document.body.classList.toggle("dark-mode");
+    if (isDraggingComponent) {
+        isDraggingComponent = false;
+        // No need to snap here again, already snapped during mousemove
+    } else if (drawingWire && currentWireStartNode) {
+        let wireEnded = false;
+        // Check if wire ends on another component's node
+        for (const comp of components) {
+            const endNode = comp.getClosestNode(mousePos.x, mousePos.y);
+            if (endNode && endNode !== currentWireStartNode) { // Cannot connect to self
+                // Prevent duplicate wires between the exact same two nodes
+                const existingWire = wires.find(w =>
+                    (w.start === currentWireStartNode && w.end === endNode) ||
+                    (w.start === endNode && w.end === currentWireStartNode)
+                );
+                if (!existingWire) {
+                    wires.push(new Wire(currentWireStartNode, endNode));
+                }
+                wireEnded = true;
+                break;
+            }
+        }
+        // If wire didn't connect to a node, discard it
+        currentWireStartNode = null;
+        drawingWire = false;
+    }
+    drawCircuit();
+});
 
-//     // Optional: Save preference in localStorage
-//     if (document.body.classList.contains("dark-mode")) {
-//       localStorage.setItem("theme", "dark");
-//     } else {
-//       localStorage.setItem("theme", "light");
-//     }
-//   });
+// Handle context menu (right-click) for rotation or deletion
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); // Prevent default browser context menu
+    const mousePos = getMousePos(e);
 
-//   // Optional: Load saved theme on page load
-//   window.addEventListener("load", () => {
-//     const savedTheme = localStorage.getItem("theme");
-//     if (savedTheme === "dark") {
-//       document.body.classList.add("dark-mode");
-//     }
-//   });
+    // Check if right-clicking on a component
+    for (let i = components.length - 1; i >= 0; i--) {
+        const comp = components[i];
+        if (comp.isClicked(mousePos.x, mousePos.y)) {
+            // Simple context menu for rotation and deletion
+            const menu = document.createElement('div');
+            menu.className = 'absolute bg-white border border-gray-300 rounded-md shadow-lg p-2 z-50';
+            menu.style.left = `${e.clientX}px`;
+            menu.style.top = `${e.clientY}px`;
+
+            // Only allow rotation for components that actually benefit from it (not Ground, OpAmp, Transistor)
+            if (comp.type !== 'Ground' && comp.type !== 'OpAmp' && comp.type !== 'Transistor') {
+                const rotateBtn = document.createElement('button');
+                rotateBtn.className = 'block w-full text-left py-1 px-2 hover:bg-gray-100 rounded-sm';
+                rotateBtn.textContent = 'Rotate 90°';
+                rotateBtn.onclick = () => {
+                    comp.rotation = (comp.rotation + 90) % 360;
+                    comp.updateNodePositions(); // Update node positions after rotation
+                    document.body.removeChild(menu);
+                    drawCircuit();
+                };
+                menu.appendChild(rotateBtn);
+            }
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'block w-full text-left py-1 px-2 text-red-600 hover:bg-red-50 rounded-sm';
+            deleteBtn.textContent = 'Delete Component';
+            deleteBtn.onclick = () => {
+                // Remove component and all associated wires
+                // Filter wires where either start or end node belongs to the component being deleted
+                wires = wires.filter(wire => {
+                    const isStartNodeOfComp = comp.nodes.some(node => node === wire.start);
+                    const isEndNodeOfComp = comp.nodes.some(node => node === wire.end);
+                    // Disconnect from nodes before filtering the wire
+                    if (isStartNodeOfComp) wire.start.connectedWires = wire.start.connectedWires.filter(w => w !== wire);
+                    if (isEndNodeOfComp) wire.end.connectedWires = wire.end.connectedWires.filter(w => w !== wire);
+                    return !(isStartNodeOfComp || isEndNodeOfComp);
+                });
+
+                components = components.filter(c => c.id !== comp.id);
+                hideComponentProperties(); // Hide if deleted
+                document.body.removeChild(menu);
+                drawCircuit();
+            };
+            menu.appendChild(deleteBtn);
+
+            document.body.appendChild(menu);
+
+            // Close menu if clicked outside
+            const closeMenu = (e2) => {
+                if (!menu.contains(e2.target)) {
+                    document.body.removeChild(menu);
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeMenu), 0); // Delay to prevent immediate close
+            return;
+        }
+    }
+});
+
+
+// --- Component Property Panel ---
+function showComponentProperties(comp) {
+    selectedComponent = comp;
+    propertiesContentDiv.innerHTML = ''; // Clear previous content
+
+    const typeLabel = document.createElement('p');
+    typeLabel.className = 'text-sm font-semibold mb-2 text-gray-700';
+    typeLabel.textContent = `Type: ${comp.type}`;
+    propertiesContentDiv.appendChild(typeLabel);
+
+    if (comp.type === 'Resistor' || comp.type === 'Capacitor' || comp.type === 'VoltageSource') {
+        const valueLabel = document.createElement('label');
+        valueLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
+        valueLabel.textContent = `Value: ${comp.value}${comp.type === 'Resistor' ? 'Ω' : comp.type === 'Capacitor' ? 'F' : 'V'}`;
+        propertiesContentDiv.appendChild(valueLabel);
+
+        const valueInput = document.createElement('input');
+        valueInput.type = 'range';
+        valueInput.min = '1';
+        valueInput.max = '100000'; // Max value for R, C, V
+        valueInput.step = '1';
+        valueInput.value = comp.value;
+        valueInput.className = 'w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-xl';
+        valueInput.oninput = (e) => {
+            comp.value = parseInt(e.target.value);
+            valueLabel.textContent = `Value: ${comp.value}${comp.type === 'Resistor' ? 'Ω' : comp.type === 'Capacitor' ? 'F' : 'V'}`;
+            drawCircuit();
+        };
+        propertiesContentDiv.appendChild(valueInput);
+    }
+    // No properties for OpAmp, Ground, or Transistor (yet)
+
+    componentPropertiesPanel.classList.remove('hidden');
+}
+
+function hideComponentProperties() {
+    componentPropertiesPanel.classList.add('hidden');
+    selectedComponent = null; // Clear selected component
+}
+
+closePropertiesBtn.addEventListener('click', hideComponentProperties);
+
+
+// --- Sample Circuit Loading Functions ---
+function loadInvertingOpAmpSample() {
+    // Clear current circuit
+    components = [];
+    wires = [];
+    hideComponentProperties();
+    simulationResultsDiv.textContent = 'Build a circuit and click "Run Simulation".';
+    simulationOutputDiv.innerHTML = '';
+
+    // Define component positions relative to canvas center
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // Create components
+    const opAmp = new Component('OpAmp', centerX + 100, centerY);
+    const vinSource = new Component('VoltageSource', centerX - 200, centerY + 100, 5); // 5V input
+    const resistorInput = new Component('Resistor', centerX - 100, centerY + 100, 1000); // 1kΩ
+    const resistorFeedback = new Component('Resistor', centerX + 100, centerY - 50, 10000); // 10kΩ
+    const ground = new Component('Ground', centerX + 100, centerY - 150);
+    const groundVin = new Component('Ground', centerX - 200, centerY + 200); // Ground for Vin source
+
+    components.push(opAmp, vinSource, resistorInput, resistorFeedback, ground, groundVin);
+
+    // Get specific nodes
+    const opAmpInv = opAmp.nodes.find(n => n.id.includes('-inv'));
+    const opAmpNonInv = opAmp.nodes.find(n => n.id.includes('-nin'));
+    const opAmpOut = opAmp.nodes.find(n => n.id.includes('-out'));
+
+    const vinPos = vinSource.nodes.find(n => n.id.includes('-n2')); // Positive terminal of V-source
+    const vinNeg = vinSource.nodes.find(n => n.id.includes('-n1')); // Negative terminal of V-source
+
+    const resInput1 = resistorInput.nodes.find(n => n.id.includes('-n1'));
+    const resInput2 = resistorInput.nodes.find(n => n.id.includes('-n2'));
+
+    const resFeedback1 = resistorFeedback.nodes.find(n => n.id.includes('-n1'));
+    const resFeedback2 = resistorFeedback.nodes.find(n => n.id.includes('-n2'));
+
+    const groundNode = ground.nodes.find(n => n.id.includes('-gnd'));
+    const groundVinNode = groundVin.nodes.find(n => n.id.includes('-gnd'));
+
+    // Create wires
+    wires.push(new Wire(vinPos, resInput1)); // Vin to Ri
+    wires.push(new Wire(resInput2, opAmpInv)); // Ri to Op-Amp Inverting input
+    wires.push(new Wire(opAmpOut, resFeedback1)); // Op-Amp Output to Rf
+    wires.push(new Wire(resFeedback2, opAmpInv)); // Rf to Op-Amp Inverting input (feedback)
+    wires.push(new Wire(opAmpNonInv, groundNode)); // Op-Amp Non-Inverting input to Ground
+    wires.push(new Wire(vinNeg, groundVinNode)); // Vin negative to Ground
+
+    drawCircuit();
+    simulationResultsDiv.textContent = 'Inverting Op-Amp sample circuit loaded!';
+    simulationOutputDiv.innerHTML = '';
+    speakMessage('Inverting Op Amp sample circuit loaded.');
+}
+
+function loadNonInvertingOpAmpSample() {
+    // Clear current circuit
+    components = [];
+    wires = [];
+    hideComponentProperties();
+    simulationResultsDiv.textContent = 'Build a circuit and click "Run Simulation".';
+    simulationOutputDiv.innerHTML = '';
+
+    // Define component positions relative to canvas center
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // Create components
+    const opAmp = new Component('OpAmp', centerX + 100, centerY);
+    const vinSource = new Component('VoltageSource', centerX - 200, centerY - 50, 5); // 5V input
+    const resistor1 = new Component('Resistor', centerX, centerY + 100, 1000); // R1 = 1kΩ
+    const resistorFeedback = new Component('Resistor', centerX + 100, centerY - 50, 10000); // Rf = 10kΩ
+    const groundR1 = new Component('Ground', centerX, centerY + 150); // Ground for R1
+    const groundVin = new Component('Ground', centerX - 200, centerY); // Ground for Vin source
+
+    components.push(opAmp, vinSource, resistor1, resistorFeedback, groundR1, groundVin);
+
+    // Get specific nodes
+    const opAmpInv = opAmp.nodes.find(n => n.id.includes('-inv'));
+    const opAmpNonInv = opAmp.nodes.find(n => n.id.includes('-nin'));
+    const opAmpOut = opAmp.nodes.find(n => n.id.includes('-out'));
+
+    const vinPos = vinSource.nodes.find(n => n.id.includes('-n2')); // Positive terminal of V-source
+    const vinNeg = vinSource.nodes.find(n => n.id.includes('-n1')); // Negative terminal of V-source
+
+    const res1_1 = resistor1.nodes.find(n => n.id.includes('-n1'));
+    const res1_2 = resistor1.nodes.find(n => n.id.includes('-n2'));
+
+    const resFeedback1 = resistorFeedback.nodes.find(n => n.id.includes('-n1'));
+    const resFeedback2 = resistorFeedback.nodes.find(n => n.id.includes('-n2'));
+
+    const groundR1Node = groundR1.nodes.find(n => n.id.includes('-gnd'));
+    const groundVinNode = groundVin.nodes.find(n => n.id.includes('-gnd'));
+
+    // Create wires
+    wires.push(new Wire(vinPos, opAmpNonInv)); // Vin to Op-Amp Non-Inverting input
+    wires.push(new Wire(opAmpInv, res1_1)); // Op-Amp Inverting input to R1
+    wires.push(new Wire(res1_2, groundR1Node)); // R1 to Ground
+    wires.push(new Wire(opAmpOut, resFeedback1)); // Op-Amp Output to Rf
+    wires.push(new Wire(resFeedback2, opAmpInv)); // Rf to Op-Amp Inverting input (feedback)
+    wires.push(new Wire(vinNeg, groundVinNode)); // Vin negative to Ground
+
+    drawCircuit();
+    simulationResultsDiv.textContent = 'Non-Inverting Op-Amp sample circuit loaded!';
+    simulationOutputDiv.innerHTML = '';
+    speakMessage('Non-Inverting Op Amp sample circuit loaded.');
+}
+
+// --- Simulation Logic (Simplified) ---
+runSimulationBtn.addEventListener('click', () => {
+    simulationResultsDiv.textContent = 'Running simulation...';
+    simulationOutputDiv.innerHTML = '';
+    let output = '';
+    let speechOutput = '';
+
+    // Filter components for simulation
+    const opAmps = components.filter(c => c.type === 'OpAmp');
+    const voltageSources = components.filter(c => c.type === 'VoltageSource');
+    const resistors = components.filter(c => c.type === 'Resistor');
+    const grounds = components.filter(c => c.type === 'Ground');
+    const transistors = components.filter(c => c.type === 'Transistor'); // New: Get transistor components
+
+    // Basic check for Op-Amp circuits (not transistor circuits for now)
+    if (opAmps.length === 0 || voltageSources.length === 0 || resistors.length < 2 || grounds.length === 0) {
+        output = `<p class="text-red-600">Insufficient components for a recognizable amplifier circuit.</p>
+                  <p class="text-sm text-gray-700 mt-2">Please ensure you have: One Op-Amp, at least one Voltage Source, at least two Resistors, and at least one Ground.</p>
+                  <p class="text-sm text-gray-700 mt-1">Or load a sample circuit.</p>`;
+        speechOutput = 'Simulation failed: Insufficient components for a recognizable amplifier circuit. Please add components or load a sample circuit.';
+        simulationOutputDiv.innerHTML = output;
+        simulationResultsDiv.textContent = 'Simulation failed: Missing components!';
+        speakMessage(speechOutput);
+        return;
+    }
+
+    // Only simulate Op-Amp circuits for now. Transistor simulation would require more advanced logic.
+    if (opAmps.length > 0) {
+        const opAmp = opAmps[0]; // Assuming only one Op-Amp for simplicity
+        const vinSource = voltageSources[0]; // Assuming one input source for simplicity
+        const vinPositiveNode = vinSource.nodes.find(n => n.id.includes('-n2')); // Positive terminal of V-source
+
+        // Get key Op-Amp nodes
+        const opAmpInv = opAmp.nodes.find(n => n.id.includes('-inv'));
+        const opAmpNonInv = opAmp.nodes.find(n => n.id.includes('-nin'));
+        const opAmpOut = opAmp.nodes.find(n => n.id.includes('-out'));
+
+        let circuitType = 'Unidentified';
+        let Vout = 'N/A';
+
+        // --- Try to identify Inverting Op-Amp configuration ---
+        const nonInvConnectedToGround = findConnectedNode(opAmpNonInv, 'Ground');
+        const inputResistorForInv = findResistorBetweenNodes(vinPositiveNode, opAmpInv, resistors); // Ri
+        const feedbackResistorForInv = findResistorBetweenNodes(opAmpOut, opAmpInv, resistors, [inputResistorForInv ? inputResistorForInv.id : null]); // Rf
+
+        if (nonInvConnectedToGround && inputResistorForInv && feedbackResistorForInv) {
+            circuitType = 'Inverting Op-Amp Amplifier';
+            const Rf = feedbackResistorForInv.value;
+            const Ri = inputResistorForInv.value;
+            const Vin = vinSource.value;
+            Vout = (-Rf / Ri) * Vin;
+
+            output = `
+                <p class="font-bold text-lg mb-2">Identified: ${circuitType}</p>
+                <p>Input Voltage (Vin): ${Vin}V</p>
+                <p>Input Resistor (Ri): ${Ri}Ω</p>
+                <p>Feedback Resistor (Rf): ${Rf}Ω</p>
+                <p class="mt-2 text-xl font-semibold text-indigo-700">Calculated Output Voltage (Vout): ${Vout.toFixed(2)}V</p>
+                <p class="text-sm text-gray-500 mt-4"> (Assuming ideal op-amp and non-inverting input is grounded.)</p>
+            `;
+            speechOutput = `Identified as Inverting Op Amp Amplifier. Input voltage: ${Vin} volts. Input resistor: ${Ri} ohms. Feedback resistor: ${Rf} ohms. Calculated output voltage: ${Vout.toFixed(2)} volts.`;
+        }
+
+        // --- Try to identify Non-Inverting Op-Amp configuration ---
+        // Only attempt if not already identified as Inverting
+        if (circuitType === 'Unidentified') {
+            // Check if non-inverting input is connected to voltage source
+            const nonInvConnectedToVin = findConnectedNode(opAmpNonInv, 'VoltageSource');
+            
+            // Find R1: one end connected to opAmpInv, other end connected to a Ground component
+            let R1Resistor = null;
+            if (opAmpInv) {
+                for (const wire of wires) {
+                    let nodeConnectedToInv = null;
+                    let otherNode = null;
+
+                    if (wire.start === opAmpInv) {
+                        nodeConnectedToInv = wire.start;
+                        otherNode = wire.end;
+                    } else if (wire.end === opAmpInv) {
+                        nodeConnectedToInv = wire.end;
+                        otherNode = wire.start;
+                    }
+
+                    if (nodeConnectedToInv && otherNode) {
+                        const compOfOtherNode = components.find(c => c.nodes.includes(otherNode));
+                        if (compOfOtherNode && compOfOtherNode.type === 'Resistor') {
+                            // This resistor is connected to the inverting input
+                            const resNodes = compOfOtherNode.nodes;
+                            const resistorOtherEndNode = (resNodes[0] === otherNode) ? resNodes[1] : resNodes[0];
+                            
+                            // Check if the other end of this resistor is connected to ground
+                            const isOtherEndGrounded = findConnectedNode(resistorOtherEndNode, 'Ground');
+                            if (isOtherEndGrounded) {
+                                R1Resistor = compOfOtherNode;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Find feedback resistor (Rf): connected between opAmpOut and opAmpInv
+            const feedbackResistorForNonInv = findResistorBetweenNodes(opAmpOut, opAmpInv, resistors, [R1Resistor ? R1Resistor.id : null]); // Exclude R1
+
+            if (nonInvConnectedToVin && R1Resistor && feedbackResistorForNonInv) {
+                circuitType = 'Non-Inverting Op-Amp Amplifier';
+                const Rf = feedbackResistorForNonInv.value;
+                const R1 = R1Resistor.value;
+                const Vin = vinSource.value;
+                Vout = Vin * (1 + (Rf / R1)); // Non-inverting gain formula
+
+                output = `
+                    <p class="font-bold text-lg mb-2">Identified: ${circuitType}</p>
+                    <p>Input Voltage (Vin): ${Vin}V</p>
+                    <p>Resistor (R1): ${R1}Ω</p>
+                    <p>Feedback Resistor (Rf): ${Rf}Ω</p>
+                    <p class="mt-2 text-xl font-semibold text-indigo-700">Calculated Output Voltage (Vout): ${Vout.toFixed(2)}V</p>
+                    <p class="text-sm text-gray-500 mt-4"> (Assuming ideal op-amp and R1 is grounded.)</p>
+                `;
+                speechOutput = `Identified as Non Inverting Op Amp Amplifier. Input voltage: ${Vin} volts. Resistor R1: ${R1} ohms. Feedback resistor: ${Rf} ohms. Calculated output voltage: ${Vout.toFixed(2)} volts.`;
+            }
+        }
+
+        // If still unidentified for Op-Amp circuits
+        if (circuitType === 'Unidentified') {
+            output = `<p class="text-red-600">No recognized amplifier circuit found for simulation.</p>
+                      <p class="text-sm text-gray-700 mt-2">Currently, the simulator can only recognize and calculate for a simple Inverting or Non-Inverting Op-Amp Amplifier.</p>
+                      <p class="text-sm text-gray-700 mt-1">Please refer to the "Load Samples" buttons for example configurations.</p>`;
+            speechOutput = 'No recognized amplifier circuit found for simulation. Please refer to the load samples buttons for example configurations.';
+        }
+    } else if (transistors.length > 0) {
+        // Placeholder for transistor simulation logic
+        output = `<p class="text-yellow-600">Transistor detected!</p>
+                  <p class="text-sm text-gray-700 mt-2">Simulation for transistor circuits is not yet implemented.</p>
+                  <p class="text-sm text-gray-700 mt-1">Stay tuned for future updates!</p>`;
+        speechOutput = 'Transistor detected. Simulation for transistor circuits is not yet implemented. Stay tuned for future updates!';
+    } else {
+        // Fallback for no recognized components or circuits
+        output = `<p class="text-red-600">No recognizable amplifier circuit found for simulation.</p>
+                  <p class="text-sm text-gray-700 mt-2">Please add components to the canvas to simulate, or load a sample circuit.</p>`;
+        speechOutput = 'No recognizable amplifier circuit found for simulation. Please add components to the canvas to simulate, or load a sample circuit.';
+    }
+
+    simulationOutputDiv.innerHTML = output;
+    simulationResultsDiv.textContent = 'Simulation complete!';
+    speakMessage(speechOutput); // Speak the final simulation result
+});
+
+resetCircuitBtn.addEventListener('click', () => {
+    components = [];
+    wires = [];
+    selectedComponent = null;
+    isDraggingComponent = false;
+    currentWireStartNode = null;
+    drawingWire = false;
+    simulationResultsDiv.textContent = 'Build a circuit and click "Run Simulation".';
+    simulationOutputDiv.innerHTML = '';
+    hideComponentProperties();
+    drawCircuit();
+    speakMessage('Circuit has been reset.');
+});
+
+// Attach event listeners for sample circuit buttons
+loadInvertingSampleBtn.addEventListener('click', loadInvertingOpAmpSample);
+loadNonInvertingSampleBtn.addEventListener('click', loadNonInvertingOpAmpSample);
+
+// --- Initial Setup ---
+// Resize canvas to fill available space
+const resizeCanvas = () => {
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth - 32; // Adjust for padding
+    canvas.height = container.clientHeight - 80; // Adjust for padding and header (main's internal padding + header height)
+    drawCircuit();
+};
+
+window.addEventListener('resize', resizeCanvas);
+// Initial draw on load
+window.onload = () => {
+    resizeCanvas();
+    speakMessage('Welcome to the Amplifier Circuit Simulation Lab. You can build circuits by dragging components, connect them with wires, and run simulations.');
+};
