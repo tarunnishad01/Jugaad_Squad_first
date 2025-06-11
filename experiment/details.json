@@ -2,7 +2,7 @@
 
    "details": [
        {
-			"Experiment": "Full interactive simulink experiments (e.g. linearity /non-linearity test )",     
+			"Experiment": "Simulation of Amplifier Circuits (custom circuit building)",     
 			"Lab": "Digital system design",               
 			"Discipline": "Electronics Engineering",				 
 			"Technology": "HTML CSS Javascript"         

@@ -1,1 +1,1 @@
-### Aim of the experiment
+### To simulate amplifier circuits using a virtual lab environment, allowing users to build custom analog amplifier circuits (e.g., CE, CC, CB, Op-amp configurations), analyze their behavior, and visualize gain, bandwidth, and signal distortion.

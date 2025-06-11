@@ -88,59 +88,108 @@
 /////////////// Write the MCQ below in the exactly same described format ///////////////
 
 
-  const myQuestions = [
+ const myQuestions = [
     {
-      question: "On increasing the radius of the steel ball to double its value the terminal velocity of the ball become box:",  ///// Write the question inside double quotes
+      question: "Which simulation result confirms the amplifier is working as intended?",
       answers: {
-        a: " double",                  ///// Write the option 1 inside double quotes
-        b: "four times",                  ///// Write the option 2 inside double quotes
-        c: "eight times",                  ///// Write the option 3 inside double quotes
-        d: "sixteen times"                   ///// Write the option 4 inside double quotes
-      },
-      correctAnswer: "b"                ///// Write the correct option inside double quotes
-    },
-
-    {
-      question: " On increasing density of material of the falling ball its terminal velocity:",  ///// Write the question inside double quotes
-      answers: {
-        a: "Increases",                  ///// Write the option 1 inside double quotes
-        b: "decreases",                  ///// Write the option 2 inside double quotes
-        c: "remains constant",                  ///// Write the option 3 inside double quotes
-        d: "NOT"                   ///// Write the option 4 inside double quotes
-      },
-      correctAnswer: "a"                ///// Write the correct option inside double quotes
-    },                                  ///// To add more questions, copy the section below 
-    									                  ///// this line
-
-
-    /* To add more MCQ's, copy the below section, starting from open curly braces ( { )
-        till closing curly braces comma ( }, )
-
-        and paste it below the curly braces comma ( below correct answer }, ) of above 
-        question
-
-    Copy below section
-
-    {
-      question: "This is question n?",
-      answers: {
-        a: "Option 1",
-        b: "Option 2",
-        c: "Option 3",
-        d: "Option 4"
+        a: "No current flow",
+        b: "Output voltage equals input",
+        c: "Amplified output signal with correct phase",
+        d: "No signal at output"
       },
       correctAnswer: "c"
     },
-
-    Copy above section
-
-    */
-
-
-
-
-  ];
-
+    {
+      question: "What is a key advantage of using simulation before building a custom amplifier circuit?",
+      answers: {
+        a: "Increases PCB size",
+        b: "Avoids need for testing",
+        c: "Identifies issues without physical components",
+        d: "Reduces gain"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "In a simulated amplifier circuit, what might a clipped output waveform suggest?",
+      answers: {
+        a: "Proper amplification",
+        b: "Noise filtering",
+        c: "Power supply limitations or overdrive",
+        d: "Component mismatch"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "Which parameter is measured in transient analysis during simulation?",
+      answers: {
+        a: "Gain at different frequencies",
+        b: "Output impedance",
+        c: "Time-domain signal response",
+        d: "Steady-state current only"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "What role does a bypass capacitor play in amplifier circuit simulation?",
+      answers: {
+        a: "Suppresses power supply ripple",
+        b: "Increases resistance",
+        c: "Inverts the signal",
+        d: "Adds noise"
+      },
+      correctAnswer: "a"
+    },
+    {
+      question: "Which configuration gives high input impedance in amplifier design?",
+      answers: {
+        a: "Common-emitter",
+        b: "Common-base",
+        c: "Emitter-follower",
+        d: "Bridge rectifier"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "Why is feedback used in amplifier circuit simulations?",
+      answers: {
+        a: "To increase distortion",
+        b: "To reduce bandwidth",
+        c: "To stabilize gain and reduce noise",
+        d: "To add oscillations"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "Which parameter would most directly indicate distortion in a simulated amplifier output?",
+      answers: {
+        a: "THD (Total Harmonic Distortion)",
+        b: "DC bias level",
+        c: "Resistance",
+        d: "Capacitance"
+      },
+      correctAnswer: "a"
+    },
+    {
+      question: "What is typically adjusted to set the gain in a custom amplifier simulation?",
+      answers: {
+        a: "Transistor color",
+        b: "Feedback resistor values",
+        c: "Power cord length",
+        d: "Simulation file format"
+      },
+      correctAnswer: "b"
+    },
+    {
+      question: "What does bandwidth of an amplifier indicate in a simulation?",
+      answers: {
+        a: "Range of supply voltage",
+        b: "Signal delay time",
+        c: "Range of frequencies it can amplify effectively",
+        d: "Circuit size"
+      },
+      correctAnswer: "c"
+    }
+];
 
 
 
