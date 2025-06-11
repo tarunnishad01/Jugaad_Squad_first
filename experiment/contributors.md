@@ -1,13 +1,15 @@
 
-<!-- Remove all lines above this line before making changes to the file -->
 | SNo. | Name          | Email               | Institute                           |  ID |
 | :--: | :------------ | :------------------ | :---------------------------------- | :-: |
-|   1  | Rajeev Bhagel | [rajeev@reck.ac.in] | Rajkiya Engineering College Kannauj |  –  |
+| 1| Tarun | tarunnishad2003@gmail.com|rajkiya engineering collage kannauj | id |☻
+| 2 | Sachin yadav | sachin26405yadav@gmail.com|rajkiya engineering collage kannauj | id |
+| 3 |Mankesh | yadavmankesh79@gmail.com|rajkiya engineering collage kannauj | id |
+| 4 |Ravi |ravimaurya767800@gmail.com|rajkiya engineering collage kannauj | id |
 
 ### Developers
-| SNo. | Name          | Email                        | Institute                           |  ID |
-| :--: | :------------ | :--------------------------  | :---------------------------------- | :-: |
-|   1  | Tarun         | [tarunnishd2003@gmail.com]   | Rajkiya Engineering College Kannauj |  –  |
-|   2  | Sachin Yadav  | [sachin26405yadav@gmail.com] | Rajkiya Engineering College Kannauj |  –  |
-|   3  | Mankesh Yadav | [yadavmankesh79@gmail.com]   | Rajkiya Engineering College Kannauj |  –  |
-|   4  | Ravi Maurya   | [ravimaurya767800@gmail.com] | Rajkiya Engineering College Kannauj |  –  |
+| SNo. | Name | Email | Institute | ID |
+| :---: | :---: | :---: | :---: | :---: |
+| 1 | Sachin yadav | sachin26405yadav@gmail.com|rajkiya engineering collage kannauj | id |
+| 2 | Tarun | tarunnishad2003@gmail.com|rajkiya engineering collage kannauj | id |☻
+
+
