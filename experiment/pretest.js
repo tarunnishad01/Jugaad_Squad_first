@@ -72,7 +72,6 @@
   const quizContainer = document.getElementById("quiz");
   const resultsContainer = document.getElementById("results");
   const submitButton = document.getElementById("submit");
- 
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -80,15 +79,9 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-
-
-
-
-
 /////////////// Write the MCQ below in the exactly same described format ///////////////
 
-
- const myQuestions = [
+  const myQuestions = [
     {
       question: "What is the primary purpose of using simulation in amplifier circuit design?",
       answers: {
@@ -189,10 +182,7 @@
       },
       correctAnswer: "a"
     }
-];
-
-
-
+  ];
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -200,14 +190,12 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-
   // display quiz right away
   buildQuiz();
 
   // on submit, show results
   submitButton.addEventListener("click", showResults);
 })();
-
 
 /////////////////////////////////////////////////////////////////////////////
 
