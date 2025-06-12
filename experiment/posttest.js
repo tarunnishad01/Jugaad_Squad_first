@@ -73,108 +73,109 @@
 /////////////////////// Do not modify the above code ////////////////////////
 
 ///////////////////////////////////////////////////
-   const myQuestions = [
-    {
-      question: "What is the primary purpose of using simulation in amplifier circuit design?",
-      answers: {
-        a: "To reduce the number of transistors",
-        b: "To avoid using capacitors",
-        c: "To analyze and test circuit behavior before physical implementation",
-        d: "To increase the PCB size"
-      },
-      correctAnswer: "c"
+const myQuestions = [
+  {
+    question: "Which simulation result confirms the amplifier is working as intended?",
+    answers: {
+      a: "No current flow",
+      b: "Output voltage equals input",
+      c: "Amplified output signal with correct phase",
+      d: "No signal at output"
     },
-    {
-      question: "Which software is commonly used for simulating amplifier circuits?",
-      answers: {
-        a: "Photoshop",
-        b: "SPICE",
-        c: "Excel",
-        d: "AutoCAD"
-      },
-      correctAnswer: "b"
+    correctAnswer: "c"
+  },
+  {
+    question: "What is a key advantage of using simulation before building a custom amplifier circuit?",
+    answers: {
+      a: "Increases PCB size",
+      b: "Avoids need for testing",
+      c: "Identifies issues without physical components",
+      d: "Reduces gain"
     },
-    {
-      question: "What does an AC analysis in amplifier simulation evaluate?",
-      answers: {
-        a: "Battery life",
-        b: "Signal frequency response",
-        c: "Device packaging",
-        d: "Wire color"
-      },
-      correctAnswer: "b"
+    correctAnswer: "c"
+  },
+  {
+    question: "In a simulated amplifier circuit, what might a clipped output waveform suggest?",
+    answers: {
+      a: "Proper amplification",
+      b: "Noise filtering",
+      c: "Power supply limitations or overdrive",
+      d: "Component mismatch"
     },
-    {
-      question: "Which component typically provides gain in an amplifier circuit?",
-      answers: {
-        a: "Resistor",
-        b: "Capacitor",
-        c: "Transistor",
-        d: "Inductor"
-      },
-      correctAnswer: "c"
+    correctAnswer: "c"
+  },
+  {
+    question: "Which parameter is measured in transient analysis during simulation?",
+    answers: {
+      a: "Gain at different frequencies",
+      b: "Output impedance",
+      c: "Time-domain signal response",
+      d: "Steady-state current only"
     },
-    {
-      question: "In simulation, what does the DC operating point help determine?",
-      answers: {
-        a: "Thermal resistance",
-        b: "Frequency range",
-        c: "Steady-state voltages and currents",
-        d: "Color coding of wires"
-      },
-      correctAnswer: "c"
+    correctAnswer: "c"
+  },
+  {
+    question: "What role does a bypass capacitor play in amplifier circuit simulation?",
+    answers: {
+      a: "Suppresses power supply ripple",
+      b: "Increases resistance",
+      c: "Inverts the signal",
+      d: "Adds noise"
     },
-    {
-      question: "Which type of amplifier is commonly used for voltage amplification?",
-      answers: {
-        a: "Common-emitter",
-        b: "Differential",
-        c: "Class D",
-        d: "Bridge rectifier"
-      },
-      correctAnswer: "a"
+    correctAnswer: "a"
+  },
+  {
+    question: "Which configuration gives high input impedance in amplifier design?",
+    answers: {
+      a: "Common-emitter",
+      b: "Common-base",
+      c: "Emitter-follower",
+      d: "Bridge rectifier"
     },
-    {
-      question: "What does 'gain' in an amplifier circuit mean?",
-      answers: {
-        a: "The number of components used",
-        b: "The increase in input signal strength",
-        c: "The heat produced",
-        d: "The signal delay"
-      },
-      correctAnswer: "b"
+    correctAnswer: "c"
+  },
+  {
+    question: "Why is feedback used in amplifier circuit simulations?",
+    answers: {
+      a: "To increase distortion",
+      b: "To reduce bandwidth",
+      c: "To stabilize gain and reduce noise",
+      d: "To add oscillations"
     },
-    {
-      question: "What must be done before running a simulation of a custom amplifier circuit?",
-      answers: {
-        a: "Build it physically",
-        b: "Export it to PDF",
-        c: "Set up all component parameters and wiring",
-        d: "Calculate shipping cost"
-      },
-      correctAnswer: "c"
+    correctAnswer: "c"
+  },
+  {
+    question: "Which parameter would most directly indicate distortion in a simulated amplifier output?",
+    answers: {
+      a: "THD (Total Harmonic Distortion)",
+      b: "DC bias level",
+      c: "Resistance",
+      d: "Capacitance"
     },
-    {
-      question: "Why might one use a virtual oscilloscope in a simulation?",
-      answers: {
-        a: "To bake circuits",
-        b: "To monitor signal voltages over time",
-        c: "To print circuit diagrams",
-        d: "To add color to the circuit"
-      },
-      correctAnswer: "b"
+    correctAnswer: "a"
+  },
+  {
+    question: "What is typically adjusted to set the gain in a custom amplifier simulation?",
+    answers: {
+      a: "Transistor color",
+      b: "Feedback resistor values",
+      c: "Power cord length",
+      d: "Simulation file format"
     },
-    {
-      question: "Which parameter indicates how much an amplifier boosts a signal?",
-      answers: {
-        a: "Gain",
-        b: "Offset",
-        c: "Impedance",
-        d: "Bandwidth"
-      },
-      correctAnswer: "a"
-    }
-  ];
+    correctAnswer: "b"
+  },
+  {
+    question: "What does bandwidth of an amplifier indicate in a simulation?",
+    answers: {
+      a: "Range of supply voltage",
+      b: "Signal delay time",
+      c: "Range of frequencies it can amplify effectively",
+      d: "Circuit size"
+    },
+    correctAnswer: "c"
+  }
+];
+
 
 /////////////////////////////////////////////////////////////////////////////
 
