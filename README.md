@@ -25,3 +25,4 @@ SrNo | Name | Faculty or Student | Department| Institute | Email id
 2 | Tarun | student | computer science | Rajikiya Engineering Collage Kannauj  |tarunnishd2003@gmail.com |
 3 | Mankesh yadav | student |  electronics engineering| Rajikiya Engineering Collage Kannauj  |yadavmankesh79@gmail.com |
 4 | Ravi maurya| student | Electronics engineering | Rajikiya Engineering Collage Kannauj  |ravimaurya767800@gmail.com |
+# Simulation-of-Amplifier-Circuits-custom-circuit-building-
